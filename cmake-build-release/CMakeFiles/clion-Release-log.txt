@@ -1,0 +1,4 @@
+"/Users/boynextdoor/Library/Application Support/JetBrains/Toolbox/apps/CLion/ch-0/223.7571.171/CLion.app/Contents/bin/cmake/mac/bin/cmake" -DCMAKE_BUILD_TYPE=Release "-DCMAKE_MAKE_PROGRAM=/Users/boynextdoor/Library/Application Support/JetBrains/Toolbox/apps/CLion/ch-0/223.7571.171/CLion.app/Contents/bin/ninja/mac/ninja" -DCMAKE_C_COMPILER=/opt/homebrew/bin/gcc-12 -DCMAKE_CXX_COMPILER=/opt/homebrew/bin/g++-12 -G Ninja -S "/Users/boynextdoor/Library/Mobile Documents/com~apple~CloudDocs/Assignments/2022-fall/Computer Graphics/CG-Final-Project" -B "/Users/boynextdoor/Library/Mobile Documents/com~apple~CloudDocs/Assignments/2022-fall/Computer Graphics/CG-Final-Project/cmake-build-release"
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /Users/boynextdoor/Library/Mobile Documents/com~apple~CloudDocs/Assignments/2022-fall/Computer Graphics/CG-Final-Project/cmake-build-release

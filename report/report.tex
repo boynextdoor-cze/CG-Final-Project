@@ -1,0 +1,153 @@
+\documentclass[acmtog]{acmart}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{natbib}
+\usepackage{listings}
+\usepackage{bm}
+\usepackage{amsmath}
+
+\newcommand{\code}[1]{\texttt{\color{magenta}{#1}}}
+\graphicspath{{img/}}
+
+\definecolor{blve}{rgb}{0.3372549 , 0.61176471, 0.83921569}
+\definecolor{gr33n}{rgb}{0.29019608, 0.7372549, 0.64705882}
+\makeatletter
+\lst@InstallKeywords k{class}{classstyle}\slshape{classstyle}{}ld
+\makeatother
+\lstset{language=C++,
+	basicstyle=\ttfamily,
+	keywordstyle=\radiance{blve}\ttfamily,
+	stringstyle=\radiance{red}\ttfamily,
+	commentstyle=\radiance{magenta}\ttfamily,
+	morecomment=[l][\radiance{magenta}]{\#},
+	classstyle = \bfseries\radiance{gr33n},
+	tabsize=2
+}
+\lstset{basicstyle=\ttfamily}
+
+% Title portion
+\title{Assignment 4: {Global Illumination}}
+
+\author{Name:\quad Zeen Chi  \\ student number:\ 2020533089
+\\email:\quad chize@shanghaitech.edu.cn}
+
+% Document starts
+\begin{document}
+\maketitle
+
+\vspace*{2 ex}
+
+\section{Introduction}
+\hspace{8pt}
+In this programming assignment, I implemented the following parts:
+\begin{itemize}
+    \item Path tracing algorithm.
+    \item BRDF of ideal diffusion and ideal reflection materials.
+    \item Advanced BVH accelerator.
+\end{itemize}
+
+\section{Implementation Details}
+\subsection{Path Tracing}
+\hspace{8pt}
+The exitant radiance of the objects on the ray's path is composed of two parts, direct lighting and indirect lighting. The direct lighting part can be computed by the integral
+\[
+L_o(x,\omega_o)=\int_AL_i(x,\omega_i)f_r(x,\omega_i,\omega_o)\frac{\cos\theta\cos\theta'}{\|x'-x\|^2}\mathrm{d}A    
+\]
+where $L_i(x,\omega_i),f_r(x,\omega_i,\omega_o)$ are the radiance and BRDF of the light source and the object, respectively, and $\theta,\theta'$ are the angles between the normal and the incident and exitant directions, respectively, and $x'$ is the position of the light source. By Monte-Carlo integration, we can estimate the direct lighting part by sampling on the light source, which is
+\[
+    L_o(x,\omega_o)\approx\frac{1}{N}\sum_{i=1}^N\frac{L_i(x,\omega_i)f_r(x,\omega_i,\omega_o)\cos\theta\cos\theta'}{\|x'-x\|^2p(x')}
+\]
+where $p(x')=\frac{1}{A}$ for square area light with area of $A$.
+
+Similarly, the indirect light can be computed by the rendering equation
+\[
+    \begin{split}
+        L_o(x,\omega_o)&=\int_{\Omega_+}L_i(x,\omega_i)f_r(x,\omega_i,\omega_o)\cos\theta\mathrm{d}\omega_i\\
+        &\approx\frac{1}{N}\sum_{i=1}^N\frac{L_i(x,\omega_i)f_r(x,\omega_i,\omega_o)(n\cdot\omega_i)}{p(\omega_i)}
+    \end{split}
+\]
+that is, we apply Monte-Carlo cosine-weighted sampling on a hemisphere. For sampling method, combining the cosine-weighted distribution and inverse transformation method, we can simply sample two random variables $\xi_1,\xi_2\sim\mathrm{Unif}(0,1)$, the sphere coordinates are $(\theta,\phi)=(\arccos(\sqrt{1-\xi_1}),2\pi\xi_2)$ and the Cartesian coordinates of the sample point on the hemisphere are $(x,y,z)=(\sin\theta\cos\phi,\sin\theta\sin\phi,\cos\theta)$. The probability density function of the hemisphere is $p(\omega_i)=\frac{n\cdot\omega_i}{\pi}$.
+
+Intuitively, we would like to sample multiple incident rays on the intersection point, but the number of rays will grow exponentially as the depth of path increases. For approximation, we only sample one incident ray on the intersection point, and we highly increase the sample rate per pixel to approximate the real rendering effects.
+
+Therefore, after computing the direct lighting and indirect lighting, we simply add them up to get the exitant radiance on the intersection point. Denote the intersection points on the ray path as $p_1,p_2,\ldots$ and the camera point as $p_0$, by the path tracing algorithm, the radiance observed by the camera ray should be
+\[
+    \begin{split}
+        L(p_0,\omega_o)&=L_{dir}(p_0)+L_{indir}(p_0)\\
+        &=L_{dir}(p_0)+\frac{L(p_1,\omega_i)f_r(p_1,\omega_i,\omega_o)(n_1\cdot\omega_i)}{p(\omega_i)}\\
+        &=L_{dir}(p_0)+\rho_1(L_{dir}(p_1)+\rho_2(L_{dir}(p_2)+\cdots))
+    \end{split}
+\]
+where $\rho$ is a coefficient less than 1 that is determined by the intersection material and Monte-Carlo sampling.
+
+Obviously, as the ray passes, the radiance will be attenuated by the BRDF of the object. Therefore, we can just terminate the path tracing algorithm when the ray is reflected by \code{max\_depth} times.
+
+\subsection{BRDF}
+\hspace{8pt}
+The bidirectional reflectance distribution function, a.k.a. BRDF, describes how much radiance is leaving the surface as a result of incident radiance. In this assignment, we only consider the ideal diffusion and ideal reflection materials. The BRDF of the ideal diffusion material is independent of $\omega_i$ and $\omega_o$, because for an incident ray, it would scatter uniformly along all directions, so the BRDF of ideal diffusion material is $\frac{R}{\pi}$, where $R$ is the color of the material.
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.4\textwidth]{diffusion.png}
+\end{figure}
+
+As for ideal specular material, since the incident ray will be ideally reflected by the mirror without any attenuation, the BRDF of the ideal reflection material is a delta function $\frac{\delta(\omega_i-\omega_o)}{|\cos\theta|}$.
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.4\textwidth]{specular.png}
+\end{figure}
+
+\pagebreak
+
+\subsection{Advanced BVH}
+\hspace{8pt}
+The bounding volume hierarchy, a.k.a. BVH, is a data structure that can accelerate the ray-triangle intersection test. In this assignment, we implemented the advanced BVH accelerator, which is constructed by Morton code method and is linearized for a cache-friendly purpose.
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\linewidth]{BVH.png}
+\end{figure}
+
+As shown in the figure above, each intermediate BVH node maintains the axis-aligned bounding box (AABB) for multiple triangle primitives, and each leaf BVH node maintains a certain triangle. Empirically, the number of triangles belonging to one leaf node should be 3-8 for efficiency.
+
+An advanced and efficient method for constructing a BVH is by Morton code. The Morton code of a point is a 64-bit integer that encodes the coordinates of the point in a 3D space, where the coordinates should be the offset within the largest AABB of all objects. Since each coordinate $(x,y,z)\in[0,1]^3$, we write the fractional part as binary form, and construct the Morton code as the following figure:
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\linewidth]{morton-code-1.png}
+\end{figure}
+
+After sorting the codes of all points, we can traverse all the triangles in a Z-order manner, guaranteeing that triangles locating near to each other can be maintained by the same BVH node.
+
+For BVH construction, we can simply split the root node at where the highest digit of Morton code changes, and recursively split the left and right child nodes. The structure is shown below:
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\linewidth]{morton-code-2.png}
+\end{figure}
+
+However, the BVH structure is represented by pointers, which means their memories are not consecutive and thus is not cache-friendly. Therefore, we can linearize the BVH structure by a depth-first traversal, and store the BVH nodes in an array. The linearization process is shown below:
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\linewidth]{BVH linearization.png}
+\end{figure}
+
+For simplicity and cache-friendliness, for each node in the array, the structure should be simplified. For intermediate nodes, we only need to store the AABB and the index of the right child node, since the left child node is exactly to the right of it in the DFS order. As for leaf nodes, we only need to store the index of the first and last triangles it maintains.
+
+\section{Results}
+\hspace{8pt}
+We implemented the path tracing algorithm and the advanced BVH accelerator, and tested them on the Cornell box scene. The simple and complicated scenes are shown below:
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\linewidth, height=0.8\linewidth]{small.png}
+    \caption{The simple scene}
+    \includegraphics[width=0.8\linewidth, height=0.8\linewidth]{large.png}
+    \caption{The complicated scene}
+\end{figure}
+
+\pagebreak
+
+I changed the material of the large cube from ideal diffusion to ideal specular, and the effect is shown below:
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\linewidth, height=0.8\linewidth]{mirror.png}
+    \caption{The simple scene with ideal specular material}
+\end{figure}
+
+\end{document}
