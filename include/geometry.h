@@ -12,6 +12,15 @@
 #include <vector>
 #include <optional>
 
+struct Vertex {
+    Vec3f position;
+    Vec3f normal;
+    Vertex(const Vec3f &_position = Vec3f(0, 0, 0), const Vec3f &_normal = Vec3f(0, 0, 0)) {
+      position = _position;
+      normal = _normal;
+    }
+};
+
 class Object {
 public:
     Object() {}

@@ -30,6 +30,7 @@ class Bounds3;
 class BVHNode;
 class BVHAccel;
 class Object;
+class Vertex;
 struct BVHObjectInfo;
 struct LinearBVHNode;
 
