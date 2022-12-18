@@ -1,7 +1,8 @@
 //
 // Created by ViXbob on 2022/12/18.
 //
-#include <bezier.h>
+#include "bezier.h"
+#include "utils.h"
 #include <fstream>
 #include <iostream>
 
@@ -144,7 +145,8 @@ std::shared_ptr<TriangleMesh> NURBS::generateMesh(SamplingMode mode, int sampleM
         }
         auto vertex = NURBS::evaluateWithNormal(controlPoints, weight, knotM, knotN, u, v, k, l);
         vertices[i * sampleNSize + j] = 0.3f * vertex.position + Vec3f(-0.5, 0.7f, 0);
-        normals[i * sampleNSize + j] = vertex.normal;
+        normals[i * sampleNSize + j] = -vertex.normal;
+        // DEBUG_VEC(vertex.normal);
       }
     }
 

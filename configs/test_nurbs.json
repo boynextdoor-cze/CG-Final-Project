@@ -1,5 +1,5 @@
 {
-  "spp": 128,
+  "spp": 12,
   "max_depth": 12,
   "image_resolution" : [600, 600],
   "cam_config" : {
