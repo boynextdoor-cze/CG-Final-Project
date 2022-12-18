@@ -7,7 +7,7 @@
 
 #define UNIMPLEMENTED
 
-template<typename T, int size>
+template <typename T, int size>
 using Vec = Eigen::Matrix<T, size, 1>;
 
 using Vec3f = Eigen::Vector3f;
@@ -16,8 +16,6 @@ using Vec2f = Eigen::Vector2f;
 using Vec2i = Eigen::Vector2i;
 using Vec4f = Eigen::Vector4f;
 using Mat3f = Eigen::Matrix3f;
-using Mat2f = Eigen::Matrix2f;
-using Mat3d = Eigen::Matrix3d;
 
 constexpr float RAY_DEFAULT_MIN = 1e-5;
 constexpr float RAY_DEFAULT_MAX = 1e7;
@@ -28,4 +26,15 @@ constexpr float EPS = 1e-5;
 class BSDF;
 class Sampler;
 
-#endif//CORE_H_
+class Bounds3;
+class BVHNode;
+class BVHAccel;
+class Object;
+struct BVHObjectInfo;
+struct LinearBVHNode;
+
+using ObjectPtr = std::shared_ptr<Object>;
+using BVHNodePtr = std::shared_ptr<BVHNode>;
+using BVHAccelPtr = std::shared_ptr<BVHAccel>;
+
+#endif //CORE_H_

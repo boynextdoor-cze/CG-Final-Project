@@ -2,102 +2,124 @@
 #include "utils.h"
 #include <omp.h>
 
+#include <chrono>
+#include <iostream>
 #include <utility>
 
 Integrator::Integrator(std::shared_ptr<Camera> cam,
                        std::shared_ptr<Scene> scene, int spp, int max_depth)
-    : camera(std::move(cam)), scene(std::move(scene)), spp(spp), max_depth(max_depth) {
+    : camera(std::move(cam)), scene(std::move(scene)), spp(spp),
+      max_depth(max_depth) {}
+
+void print_ray(Ray &ray) {
+  std::cout << "ray's origin is (" << ray.origin.x() << ", " << ray.origin.y()
+            << ", " << ray.origin.z() << ")" << std::endl;
+  std::cout << "ray's direction is (" << ray.direction.x() << ", "
+            << ray.direction.y() << ", " << ray.direction.z() << ")"
+            << std::endl
+            << std::endl;
 }
+
+const Vec3f DUMMY_POS = Vec3f(0.f, 0.f, 0.f);
 
 void Integrator::render() const {
-	Vec2i resolution = camera->getImage()->getResolution();
-	int cnt = 0;
-	Sampler sampler;
-// clang-format off
-	#pragma omp parallel for schedule(dynamic), shared(cnt, resolution), private(sampler), default(none)
-	// clang-format on
-	for (int dx = 0; dx < resolution.x(); dx++) {
-// clang-format off
-		#pragma omp atomic
-		// clang-format on
-		++cnt;
-		printf("\r%.02f%%", cnt * 100.0 / resolution.x());
-		sampler.setSeed(omp_get_thread_num());
-		for (int dy = 0; dy < resolution.y(); dy++) {
-			Vec3f L(0, 0, 0);
-			std::vector<Vec2f> ray_samples = camera->getRaySamples((float) dx, (float) dy, spp);
-			for (auto &ray_sample: ray_samples) {
-				Ray ray = camera->generateRay(ray_sample.x(), ray_sample.y());
-				L += radiance(ray, sampler, 0) / (float) ray_samples.size();
-			}
-			camera->getImage()->setPixel(dx, dy, L);
-		}
-	}
+  Vec2i resolution = camera->getImage()->getResolution();
+  int cnt = 0;
+  Sampler sampler;
+  int sppx = std::sqrt(spp);
+  int sppy = sppx;
+  auto start = std::chrono::steady_clock::now();
+#ifndef MY_DEBUG
+#pragma omp parallel for schedule(dynamic), shared(cnt), private(sampler)
+#endif
+  for (int dx = 0; dx < resolution.x(); dx++) {
+    #pragma omp critical
+    {
+      cnt++;
+      UpdateProgress(cnt * 1.0f / resolution.x());
+      auto end = std::chrono::steady_clock::now();
+      auto time =
+          std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
+      std::cout << ", Elapsed " << time << "s.";
+      std::cout.flush();
+    }
+
+    sampler.setSeed(omp_get_thread_num());
+    for (int dy = 0; dy < resolution.y(); dy++) {
+      Vec3f L(0, 0, 0);
+      // to compute radiance.
+      for (int _spp = 0; _spp < spp; _spp++) {
+        Vec2f cast_at = sampler.get2D() + Vec2f(dx, dy);
+        Ray ray = camera->generateRay(cast_at.x(), cast_at.y());
+        L += radiance(ray, sampler);
+      }
+      camera->getImage()->setPixel(dx, dy, L / spp);
+    }
+  }
 }
 
-bool isInvalid(Vec3f v) {
-	bool isnan = std::isnan(v.x()) || std::isnan(v.y()) || std::isnan(v.z());
-	bool isinf = std::isinf(v.x()) || std::isinf(v.y()) || std::isinf(v.z());
-	bool toolarge = v.x() > 1.f || v.y() > 1.f || v.z() > 1.f;
-	return isnan || isinf || toolarge;
+Vec3f Integrator::radiance(Ray &ray, Sampler &sampler) const {
+  Vec3f L(0, 0, 0);
+  Vec3f beta(1, 1, 1);
+  bool isDelta = false;
+  Ray cur_ray = ray;
+  for (int i = 0; i < max_depth; ++i) {
+    /// Compute radiance (direct + indirect)
+    Interaction interaction;
+    scene->intersect(cur_ray, interaction);
+    interaction.wo = -cur_ray.direction;
+    if (interaction.type == Interaction::Type::NONE)
+      break;
+    else if (interaction.type == Interaction::Type::LIGHT) {
+      if (i == 0) {
+        L += scene->getLight()
+                 ->emission(DUMMY_POS, interaction.wo)
+                 .cwiseProduct(beta);
+      }
+      break;
+    }
+
+#ifdef MY_DEBUG
+    std::cout << i << std::endl;
+    DEBUG_VEC(interaction.normal);
+    DEBUG_VEC(interaction.pos);
+#endif
+    // direct light
+    L += directLighting(interaction, sampler).cwiseProduct(beta);
+
+    // indirect light
+    float pdf = interaction.material->sample(interaction, sampler);
+    float cosine_wi = interaction.normal.dot(interaction.wi);
+    Vec3f cur_brdf = interaction.material->evaluate(interaction);
+    beta = beta.cwiseProduct(cur_brdf).eval() * cosine_wi / pdf;
+
+    cur_ray = Ray(interaction.pos, interaction.wi);
+  }
+#ifdef MY_DEBUG
+  DEBUG_VEC(L);
+#endif
+  return L;
 }
 
-Vec3f Integrator::radiance(Ray &ray, Sampler &sampler, int depth) const {
-	if (depth >= max_depth) {
-		return Vec3f::Zero();
-	}
-	Interaction in;
-	bool scene_intersect = scene->intersect(ray, in);
-	if (!scene_intersect || in.type == Interaction::Type::NONE) {
-		return Vec3f::Zero();
-	}
-	if (in.type == Interaction::Type::LIGHT) {
-		std::shared_ptr<Light> light = scene->getLight();
-		Vec3f L = light->emission(in.normal, ray.direction);
-		return L;
-	}
-	if (in.type == Interaction::Type::GEOMETRY) {
-		Vec3f directLight = directLighting(in, sampler);
-		directLight = isInvalid(directLight) ? Vec3f::Zero() : directLight;
-		Vec3f indirectLight(0, 0, 0);
-		in.wo = -ray.direction;
-		if (!in.material->isDelta()) {
-			Vec3f wi = in.material->sample(in, sampler);
-			Ray nextRay(in.pos, wi);
-			if (!scene->isShadowed(nextRay)) {
-				return directLight;
-			}
-			Vec3f L = radiance(nextRay, sampler, depth + 1);
-			indirectLight = in.material->evaluate(in).cwiseProduct(L) * wi.dot(in.normal) / in.material->pdf(in);
-		} else {
-			Vec3f wi = -in.wo + 2 * (in.wo.dot(in.normal)) * in.normal;
-			Ray nextRay(in.pos, wi);
-			if (!scene->isShadowed(nextRay)) {
-				return directLight;
-			}
-			indirectLight = radiance(nextRay, sampler, depth + 1);
-		}
-		indirectLight = isInvalid(indirectLight) ? Vec3f::Zero() : indirectLight;
-		return directLight + indirectLight;
-	}
-	return Vec3f::Zero();
-}
+Vec3f Integrator::directLighting(Interaction &interaction,
+                                 Sampler &sampler) const {
+  Vec3f L(0, 0, 0);
+  // Compute direct lighting.
+  float pdf = scene->getLight()->pdf(interaction, DUMMY_POS);
+  Vec3f light_pos = scene->getLight()->sample(interaction, sampler);
+  interaction.wi = (light_pos - interaction.pos).normalized();
+  Ray shadow_ray(interaction.pos, interaction.wi);
+  float dist = (light_pos - interaction.pos).norm();
+  if (!scene->isShadowed(shadow_ray, dist)) {
+    float dis_square = dist * dist;
+    Vec3f cur_brdf = interaction.material->evaluate(interaction);
+    float cosine_wi = interaction.normal.dot(interaction.wi);
+    float cosine_theta = Vec3f(0, -1.0, 0).dot(-interaction.wi);
+    L = scene->getLight()
+            ->emission(DUMMY_POS, -interaction.wi)
+            .cwiseProduct(cur_brdf) *
+        cosine_wi * cosine_theta / (pdf * dis_square);
+  }
 
-Vec3f Integrator::directLighting(Interaction &interaction, Sampler &sampler) const {
-	Vec3f L(0, 0, 0);
-	std::shared_ptr<Light> light = scene->getLight();
-	Vec3f sample_pos = light->sample(interaction, nullptr, sampler);
-	Vec3f ray_dir = sample_pos - interaction.pos;
-	Ray shadowRay(interaction.pos, ray_dir);
-	if (!scene->isShadowed(shadowRay)) {
-		float cos_theta_i = interaction.normal.dot(ray_dir.normalized());
-		float cos_theta_o = light->getNormal().dot(-ray_dir.normalized());
-		float dist = (float) std::pow((sample_pos - interaction.pos).norm(), 2);
-		Vec3f brdf = interaction.material->evaluate(interaction);
-		Vec3f light_radiance = light->emission(sample_pos, ray_dir);
-		L = cos_theta_i * cos_theta_o * light_radiance.cwiseProduct(brdf);
-		L /= dist;
-		L /= light->pdf(interaction, sample_pos);
-	}
-	return L;
+  return L;
 }

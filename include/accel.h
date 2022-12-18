@@ -1,49 +1,69 @@
+#pragma once
 #ifndef ACCEL_H_
 #define ACCEL_H_
 
-#include <utility>
-
+#include "bounds3.h"
 #include "core.h"
+#include "geometry.h"
+#include "interaction.h"
 #include "ray.h"
 
-struct AABB {
-	// the minimum and maximum coordinate for the AABB
-	Vec3f low_bnd;
-	Vec3f upper_bnd;
+// BVHAccel Forward Declarations
+struct BVHObjectInfo;
+struct LinearBVHNode {
+  Bounds3 bounds;
+  union {
+    int object_offset; // leaf
+    int right_offset;  // interior
+  };
+  uint16_t objects_num; // 0 -> interior node
+  uint8_t split_axis;   // interior node: xyz
+  uint8_t padding;      // ensure 32 byte total size
+};
 
-	AABB() : low_bnd(0, 0, 0), upper_bnd(0, 0, 0) {}
-	AABB(Vec3f low, Vec3f upper) : low_bnd(std::move(low)), upper_bnd(std::move(upper)) {}
-	/// construct an AABB from three vertices of a triangle.
-	AABB(const Vec3f &v1, const Vec3f &v2, const Vec3f &v3);
-	/// Construct AABB by merging two AABBs
-	AABB(const AABB &a, const AABB &b);
-	/// test intersection with given ray.
-	/// ray distance of entrance and exit point are recorded in t_in and t_out
-	bool intersect(const Ray &ray, float &t_in, float &t_out);
-	/// Get the AABB center
-	[[nodiscard]] Vec3f getCenter() const { return (low_bnd + upper_bnd) / 2; }
-	/// Get the length of a specified side on the AABB
-	[[nodiscard]] float getDist(int dim) const { return upper_bnd[dim] - low_bnd[dim]; }
-	/// Check whether the AABB is overlapping with another AABB
-	[[nodiscard]] bool isOverlap(const AABB &other) const;
+class BVHAccel {
+
+public:
+  // BVHAccel Public Types
+  enum class SplitMethod { NAIVE, SAH };
+
+  // BVHAccel Public Methods
+  BVHAccel(std::vector<ObjectPtr> &p, int maxPrimsInNode = 1,
+           SplitMethod splitMethod = SplitMethod::SAH);
+  Bounds3 WorldBound() const;
+  ~BVHAccel();
+
+  bool getIntersection(const Ray &ray, Interaction &optimal, bool hitAny = false) const;
+  void getIntersection(BVHNodePtr node, const Ray &ray,
+                       Interaction &optimal) const;
+  BVHNodePtr root;
+
+private:
+  // BVHAccel Private Methods
+  BVHNodePtr recursiveBuild(std::vector<BVHObjectInfo> &object_info, int begin,
+                            int end, int &total_nodes,
+                            std::vector<ObjectPtr> &ordered_obj);
+  int flattenBVHTree(BVHNodePtr node, int &offset);
+  void recursiveCheck(BVHNodePtr node);
+  // BVHAccel Private Data
+  const int maxPrimsInNode;
+  const SplitMethod splitMethod;
+  std::vector<ObjectPtr> objects;
+  // std::vector<LinearBVHNode> nodes;
+  LinearBVHNode *nodes;
 };
 
 struct BVHNode {
-	AABB aabb;
-	BVHNode *left{nullptr};
-	BVHNode *right{nullptr};
-	int start{};
-	int end{};
-	int size{};
+public:
+  Bounds3 bounds;
+  BVHNodePtr left;
+  BVHNodePtr right;
+  int split_axis, first_object_offset, objects_num;
+  BVHNode();
+  void initInterior(int _split_axis, BVHNodePtr _left, BVHNodePtr _right);
+  void initLeaf(int first, int n, const Bounds3 &bound);
 };
 
-struct LinearBVHNode {
-	AABB aabb;
-	int start{-1};
-	union {
-		int end{-1};
-		int right;
-	};
-};
+// You may need to add your code for BVH construction here.
 
-#endif//ACCEL_H_
+#endif // ACCEL_H_
