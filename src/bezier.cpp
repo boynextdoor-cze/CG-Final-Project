@@ -606,7 +606,7 @@ void NURBS::refine() {
 #endif
 }
 
-std::vector<Vec4f> NURBS::getHomoControlPoints(int i = -1, int j = -1) const {
+std::vector<Vec4f> NURBS::getHomoControlPoints(int i, int j) const {
 	if((i == -1) + (j == -1) != 1) {
 		std::cout << "ERROR::NURBS::getHomoControlPoints" << std::endl;
 		exit(-1);
@@ -810,3 +810,8 @@ void IntervalObject::updateBounds() {
 }
 
 Bounds3 IntervalObject::getBounds() const { return bound; }
+
+bool IntervalObject::intersect(const Ray &ray, Interaction &interaction) const {
+	// TODO
+	return false;
+}
