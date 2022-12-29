@@ -606,6 +606,38 @@ void NURBS::refine() {
 #endif
 }
 
+std::vector<Vec4f> NURBS::getHomoControlPoints(int i = -1, int j = -1) const {
+	if((i == -1) + (j == -1) != 1) {
+		std::cout << "ERROR::NURBS::getHomoControlPoints" << std::endl;
+		exit(-1);
+	}
+	
+	if(i == -1) {
+		if(j < 0 || j > v_n) {
+			std::cout << "ERROR::NURBS::getHomoControlPoints" << std::endl;
+			exit(-1);
+		}
+		std::vector<Vec4f> result(u_n + 1);
+		for(int _i = 0; _i <= u_n; _i++)
+			result[i] = toHomogeneous(controlPoints[_i][j], weight[_i][j]);
+		return result;
+	}
+	
+	if(j == -1) {
+		if(i < 0 || i < u_n) {
+			std::cout << "ERROR::NURBS::getHomoControlPoints" << std::endl;
+			exit(-1);
+		}
+		std::vector<Vec4f> result(v_n + 1);
+		for(int _j = 0; _j <= v_n; _j++)
+			result[_j] = toHomogeneous(controlPoints[i][_j], weight[i][_j]);
+		return result;
+	}
+
+	std::cout << "ERROR::NURBS::getHomoControlPoints" << std::endl;
+	exit(-1);
+}
+
 std::shared_ptr<TriangleMesh> NURBS::generateMesh(SamplingMode mode, int sampleMSize, int sampleNSize) {
   std::vector<Vec3f> vertices;
   std::vector<Vec3f> normals;
@@ -696,16 +728,85 @@ void insertKnot(std::vector<float> &knot,
 								std::vector<Vec4f> &homoControlPoints, 
 								int &p, int &m, int &n, float u) {
 	int k = upper_bound(knot.begin(), knot.end(), u) - knot.begin() - 1;
+	int s = 0;
+	for(int i = k; i >= 0 && std::fabs(knot[i] - u) < EQ_EPS; i--)
+		s++;
 	std::vector<Vec4f> q(p);
-	for(int i = k - p + 1; i <= k; i++) {
+	for(int i = k - p + 1; i <= k - s; i++) {
 		float alpha = (u - knot[i]) / (knot[i + p] - knot[i]);
 		q[i - (k - p + 1)] = (1 - alpha) * homoControlPoints[i - 1] + alpha * homoControlPoints[i];
 	}
-	for(int i = k - p + 1; i < k; i++) {
+	for(int i = k - p + 1; i < k - s; i++) {
 		homoControlPoints[i] = q[i - (k - p + 1)];
 	}
-	homoControlPoints.insert(homoControlPoints.begin() + k, q[k - (k - p + 1)]);
+	homoControlPoints.insert(homoControlPoints.begin() + k - s, q[k - (k - p + 1)]);
 	knot.insert(knot.begin() + k + 1, u);
 	m++;
 	n++;
 }
+
+Bounds3 getCurveBounds(const std::vector<float> &knot, 
+											 const std::vector<Vec4f> &controlPoints, 
+											 const int &p, const int &m, const int &n, int k) {
+	Bounds3 result;
+
+	int c = k;
+	int base = c - p;
+	int s = 1;
+	int h = p - s;
+	float u = knot[k];
+
+	std::vector<Vec4f> refinedControlPoints(controlPoints.begin() + c - p, controlPoints.begin() + c - s + 1);
+
+	std::vector<Vec4f> q = refinedControlPoints;
+	
+	refinedControlPoints[p - 1] = controlPoints[k];
+	for(int r = 1; r <= h; r++) {
+		refinedControlPoints[p - 2 - (r - 1)] = q[c - s - base];
+		for(int i = c - s; i >= c - p + r; i--) {
+			float alpha = (u - knot[i]) / (knot[i + p - r + 1] - knot[i]);
+			int index = i - base;
+			q[index] = alpha * q[index] + (1 - alpha) * q[index - 1];
+		}
+	}
+	result = Union(result, fromHomogeneous(q[c - s - base]));
+	
+	c = k + p;
+	base = c - p;
+	s = 1;
+	h = p - s;
+	u = knot[k + 1];
+	q = refinedControlPoints;
+
+	result = Union(result, fromHomogeneous(q[0]));
+	for(int r = 1; r <= h; r++) {
+		for(int i = c - s; i >= c - p + r; i--) {
+			// knot[i]
+			float knot_I = (i > k + p - 1) ? knot[k + i - (k + p - 1)] : knot[k];
+			// knot[i + p - r + 1]
+			float knot_J = (i + p - r + 1 > k + p - 1) ? knot[k + (i + p - r + 1) - (k + p - 1)] : knot[k];
+			float alpha = (u - knot_I) / (knot_J - knot_I);
+			int index = i - base;
+			q[index] = alpha * q[index] + (1 - alpha) * q[index - 1];
+		}
+		result = Union(result, fromHomogeneous(q[c - p + r - base]));
+	}
+
+	return result;
+}
+
+IntervalObject::IntervalObject(std::shared_ptr<NURBS> &_surface, int _i, int _j) 
+	: surface(_surface), i(_i), j(_j) {
+	updateBounds();
+}
+
+void IntervalObject::updateBounds() {
+	bound = Bounds3();
+	
+	bound = Union(bound, getCurveBounds(surface->knotN, surface->getHomoControlPoints(i, -1), surface->v_p, surface->v_m, surface->v_n, j));
+	bound = Union(bound, getCurveBounds(surface->knotN, surface->getHomoControlPoints(i + 1, -1), surface->v_p, surface->v_m, surface->v_n, j));
+	bound = Union(bound, getCurveBounds(surface->knotM, surface->getHomoControlPoints(-1, j), surface->u_p, surface->u_m, surface->u_n, i));
+	bound = Union(bound, getCurveBounds(surface->knotM, surface->getHomoControlPoints(-1, j + 1), surface->u_p, surface->u_m, surface->u_n, i));
+}
+
+Bounds3 IntervalObject::getBounds() const { return bound; }

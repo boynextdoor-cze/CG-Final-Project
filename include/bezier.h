@@ -6,6 +6,7 @@
 #define CS171_ASSIGNMENT4_BEZIER_H
 #include "core.h"
 #include "geometry.h"
+#include "bounds3.h"
 #include <vector>
 
 enum SamplingMode {
@@ -31,10 +32,27 @@ public:
 		Vertex evaluateWithNormal(double u, double v);
 		Vertex evaluateWithNormalOld(float u, float v);
 		void refine();
+		std::vector<Vec4f> getHomoControlPoints(int i = -1, int j = -1) const;
     std::shared_ptr<TriangleMesh> generateMesh(SamplingMode mode = Uniform, int sampleMSize = 100, int sampleNSize = 100);
+};
+
+class IntervalObject : public Object {
+public:
+	IntervalObject() = default;
+	IntervalObject(std::shared_ptr<NURBS> &_surface, int _i, int _j);
+	std::shared_ptr<NURBS> surface;
+	Bounds3 bound;
+	// surface patch [knotU[i], knotU[i + 1]) x [knotV[j], knotV[j + 1])
+	int i, j;
+	void updateBounds();
+	Bounds3 getBounds() const override;
+	bool intersect(const Ray &ray, Interaction &interaction) const override;
 };
 
 std::vector<std::vector<Vec3f>> readControlPoints(const std::string &path, int m, int n);
 std::vector<std::vector<float>> readWeights(const std::string &path, int m, int n);
 void insertKnot(std::vector<float> &knot, std::vector<Vec4f> &controlPoints, int &p, int &m, int &n, float u);
+Bounds3 getCurveBounds(const std::vector<float> &knot, 
+											 const std::vector<Vec4f> &controlPoints, 
+											 const int &p, const int &m, const int &n, int k);
 #endif //CS171_ASSIGNMENT4_BEZIER_H
