@@ -5,6 +5,7 @@
 #include "utils.h"
 #include <fstream>
 #include <iostream>
+#include <algorithm>
 
 NURBS::NURBS(int m, int n, int _k, int _l) {
   controlPoints.resize(m + 1);
@@ -17,6 +18,14 @@ NURBS::NURBS(int m, int n, int _k, int _l) {
   l = _l;
   knotM.resize(m + k + 1);
   knotN.resize(n + l + 1);
+	u_m = m + k;
+	u_n = m;
+	u_p = _k - 1;
+
+	v_m = n + l;
+	v_n = n;
+	v_p = _l - 1;
+
 }
 
 void NURBS::setControlPoint(int i, int j, Vec3f point) {
@@ -82,10 +91,7 @@ std::pair<float, float> NURBS::evaluateN(std::vector<float> &knot, float t, int 
   return {value, derivative};
 }
 
-Vertex NURBS::evaluateWithNormal(std::vector<std::vector<Vec3f>> &controlPoints,
-                                                            std::vector<std::vector<float>> &weight,
-                                                            std::vector<float> &knotM, std::vector<float> &knotN,
-                                                            float u, float v, int k, int l) {
+Vertex NURBS::evaluateWithNormalOld(float u, float v) {
   assert(!controlPoints.empty());
   auto m = controlPoints.size(), n = controlPoints.front().size();
   Vec3f point(0.0f, 0.0f, 0.0f), tangentU(0.0f, 0.0f, 0.0f), tangentV(0.0f, 0.0f, 0.0f);
@@ -113,7 +119,160 @@ Vertex NURBS::evaluateWithNormal(std::vector<std::vector<Vec3f>> &controlPoints,
   auto U = (tangentU * pointFrac - tangentUFrac * point) / (pointFrac * pointFrac);
   auto V = (tangentV * pointFrac - tangentVFrac * point) / (pointFrac * pointFrac);
   auto normal = U.cross(V).normalized();
-  return {p, normal};
+  return {p, normal, U, V};
+}
+
+Vertex NURBS::evaluateWithNormal(float u, float v) {
+	return evaluateWithNormalOld(u, v);
+	// u \in [knotM[c], knotM[c + 1])
+	// v \in [knotN[d], knotN[d + 1])
+	int p = u_p, q = v_p;
+	int c = upper_bound(knotM.begin(), knotM.end(), u) - knotM.begin() - 1;
+	int d = upper_bound(knotN.begin(), knotN.end(), v) - knotN.begin() - 1;
+	int s = 0, t = 0;
+	for(int i = c; i >= 0 && std::fabs(knotM[i] - u) < EQ_EPS; i--) {
+		s++;
+	}
+	for(int i = d; i >= 0 && std::fabs(knotN[i] - v) < EQ_EPS; i--) {
+		t++;
+	}
+
+	std::vector<Vec4f> homo_points_on_u(p - s + 1);
+	std::vector<Vec4f> homo_points_on_v(q - t + 1);
+	
+	Vec4f u_control_point, u_control_point_next;
+	Vec4f v_control_point, v_control_point_next;
+	// Compute along u direction
+	for(int i = c - p; i <= c - s; i++) {
+		for(int j = d - q; j <= d - t; j++) {
+			homo_points_on_v[j - (d - q)] = {controlPoints[i][j].x(), controlPoints[i][j].y(), controlPoints[i][j].z(), weight[i][j]};
+		}
+		for(int r = 1; r <= q - t; r++) {
+			for(int _i = d - t; _i >= d - q + r; _i--) {
+				float alpha = (v - knotN[_i]) / (knotN[_i + q - r + 1] - knotN[_i]);
+				int index = _i - (d - q);
+				homo_points_on_v[index] = alpha * homo_points_on_v[index] + (1 - alpha) * homo_points_on_v[index - 1];
+			}
+		}
+		homo_points_on_u[i - (c - p)] = homo_points_on_v[d - t - (d - q)];
+	}
+	
+	for(int r = 1; r < p - s; r++) {
+		for(int i = c - s; i >= c - p + r; i--) {
+			float alpha = (u - knotM[i]) / (knotM[i + p - r + 1] - knotM[i]);
+			int index = i - (c - p);
+			homo_points_on_u[index] = alpha * homo_points_on_u[index] + (1 - alpha) * homo_points_on_u[index - 1];
+		}
+	}
+
+	{
+		int r = p - s, i = c - s;
+		float alpha = (u - knotM[i]) / (knotM[i + p - r + 1] - knotM[i]);
+		int index = i - (c - p);
+		u_control_point_next = homo_points_on_u[index];
+		u_control_point = alpha * homo_points_on_u[index] + (1 - alpha) * homo_points_on_u[index - 1];
+	}
+
+	// Compute along v direction
+	for(int j = d - q; j <= d - t; j++) {
+		for(int i = c - p; i <= c - s; i++) {
+			homo_points_on_u[i - (c - p)] = {controlPoints[i][j].x(), controlPoints[i][j].y(), controlPoints[i][j].z(), weight[i][j]};
+		}
+		for(int r = 1; r <= p - s; r++) {
+			for(int _i = c - s; _i >= c - p + r; _i--) {
+				float alpha = (u - knotM[_i]) / (knotM[_i + p - r + 1] - knotM[_i]);
+				int index = _i - (c - p);
+				homo_points_on_u[index] = alpha * homo_points_on_u[index] + (1 - alpha) * homo_points_on_u[index - 1];
+			}
+		}
+		homo_points_on_v[j - (d - q)] = homo_points_on_u[c - s - (c - p)];
+	}
+
+	for(int r = 1; r < q - t; r++) {
+		for(int i = d - t; i >= d - q + r; i--) {
+				float alpha = (v - knotN[i]) / (knotN[i + q - r + 1] - knotN[i]);
+				int index = i - (d - q);
+				homo_points_on_v[index] = alpha * homo_points_on_v[index] + (1 - alpha) * homo_points_on_v[index - 1];
+		}
+	}
+
+	{
+		int r = q - t, i = d - t;
+		float alpha = (v - knotN[i]) / (knotN[i + q - r + 1] - knotN[i]);
+		int index = i - (d - q);
+		v_control_point_next = homo_points_on_v[index];
+		v_control_point = alpha * homo_points_on_v[index] + (1 - alpha) * homo_points_on_v[index - 1];
+	}
+
+	Vec3f point = u_control_point.head<3>() / u_control_point.w();
+	Vec3f	v_point = v_control_point.head<3>() / v_control_point.w();
+	Vec3f u_point_next = u_control_point_next.head<3>() / u_control_point_next.w();
+	Vec3f v_point_next = v_control_point_next.head<3>() / v_control_point_next.w();
+	Vec3f derivative_u = p * u_control_point_next.w() / ((knotM[c + 1] - u) * u_control_point.w()) * (u_point_next - point);
+	Vec3f derivative_v = q * v_control_point_next.w() / ((knotN[d + 1] - v) * u_control_point.w()) * (v_point_next - point);
+	Vec3f normal = derivative_u.cross(derivative_v).normalized();
+
+// #define MY_DEBUG
+#ifdef MY_DEBUG
+	if((point - v_point).norm() > EPS) {
+		std::cout << "ERROR: evaluate self error!!" << std::endl;
+		exit(-1);
+	}
+	Vertex evaluate_old = evaluateWithNormalOld(controlPoints, weight, knotM, knotN, u, v, k, l);
+	float EPS = 1e-3;
+	if((evaluate_old.position - point).norm() > EPS) {
+		std::cout << "ERROR: evaluate position error!!" << std::endl;
+		std::cout << "Position" << std::endl;
+		std::cout << evaluate_old.position << std::endl;
+		std::cout << point << std::endl;
+		std::cout << "Derivative on u" << std::endl;
+		std::cout << evaluate_old.derivative_u << std::endl;
+		std::cout << derivative_u << std::endl;
+		std::cout << "Derivative on v" << std::endl;
+		std::cout << evaluate_old.derivative_v << std::endl;
+		std::cout << derivative_v << std::endl;
+		std::cout << "Normal" << std::endl;
+		std::cout << evaluate_old.derivative_u.cross(evaluate_old.derivative_v) << std::endl;
+		std::cout << derivative_u.cross(derivative_v) << std::endl;
+		exit(-1);
+	}
+	// std::cout << "Position" << std::endl;
+	// std::cout << evaluate_old.position << std::endl;
+	// std::cout << point << std::endl;
+	// std::cout << "Derivative on u" << std::endl;
+	// std::cout << evaluate_old.derivative_u << std::endl;
+	// std::cout << derivative_u << std::endl;
+	// std::cout << "Derivative on v" << std::endl;
+	// std::cout << evaluate_old.derivative_v << std::endl;
+	// std::cout << derivative_v << std::endl;
+	// std::cout << "Normal" << std::endl;
+	// std::cout << evaluate_old.derivative_u.cross(evaluate_old.derivative_v) << std::endl;
+	// std::cout << derivative_u.cross(derivative_v) << std::endl;
+	// if((evaluate_old.derivative_u - derivative_u).norm() > EPS) {
+	// 	std::cout << "ERROR: evaluate derivative_u error!!" << std::endl;
+	// 	exit(-1);
+	// }
+	// if((evaluate_old.derivative_v - derivative_v).norm() > EPS) {
+	// 	std::cout << "ERROR: evaluate derivate_v error!!" << std::endl;
+	// 	std::cout << "Derivative on v" << std::endl;
+	// 	std::cout << evaluate_old.derivative_v << std::endl;
+	// 	std::cout << derivative_v << std::endl;
+	// 	exit(-1);
+	// }
+	// if((evaluate_old.normal - normal).norm() > EPS) {
+	// 	std::cout << "ERROR: evaluate normal error!!" << std::endl;
+	// 	std::cout << u << " " << v << std::endl;
+	// 	// exit(-1);
+	// }
+	if((evaluate_old.normal - normal).norm() > EPS || 
+		 (evaluate_old.derivative_v - derivative_v).norm() > EPS || 
+		 (evaluate_old.derivative_u - derivative_u).norm() > EPS) {
+		std::cout << u << " " << v << std::endl;
+		std::cout << s << " " << t << std::endl;
+	}
+#endif
+// #undef MY_DEBUG
+	return {point, normal, derivative_u, derivative_v};
 }
 
 std::shared_ptr<TriangleMesh> NURBS::generateMesh(SamplingMode mode, int sampleMSize, int sampleNSize) {
@@ -143,7 +302,7 @@ std::shared_ptr<TriangleMesh> NURBS::generateMesh(SamplingMode mode, int sampleM
         if (j == sampleNSize - 1) {
           v -= 1e-5;
         }
-        auto vertex = NURBS::evaluateWithNormal(controlPoints, weight, knotM, knotN, u, v, k, l);
+        auto vertex = evaluateWithNormal(u, v);
         vertices[i * sampleNSize + j] = 0.3f * vertex.position + Vec3f(-0.5, 0.7f, 0);
         normals[i * sampleNSize + j] = -vertex.normal;
         // DEBUG_VEC(vertex.normal);
