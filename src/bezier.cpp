@@ -7,6 +7,34 @@
 #include <iostream>
 #include <algorithm>
 
+Vec4f toHomogeneous(Vec3f p, float w) {
+	p *= w;
+	return {p.x(), p.y(), p.z(), w};
+}
+
+Vec3f fromHomogeneous(Vec4f p) {
+	p /= p.w();
+	return p.head<3>();
+}
+
+Vec4d toHomogeneous(Vec3d p, double w) {
+	p *= w;
+	return {p.x(), p.y(), p.z(), w};
+}
+
+Vec3d fromHomogeneous(Vec4d p) {
+	p /= p.w();
+	return p.head<3>();
+}
+
+Vec3f to3f(Vec3d p) {
+	return {(float)p.x(), (float)p.y(), (float)p.z()};
+}
+
+Vec3d to3d(Vec3f p) {
+	return {(double)p.x(), (double)p.y(), (double)p.z()};
+}
+
 NURBS::NURBS(int m, int n, int _k, int _l) {
   controlPoints.resize(m + 1);
   for (auto &tmpControlPoints : controlPoints) {
@@ -123,7 +151,7 @@ Vertex NURBS::evaluateWithNormalOld(float u, float v) {
 }
 
 Vertex NURBS::evaluateWithNormal(float u, float v) {
-	return evaluateWithNormalOld(u, v);
+	// return evaluateWithNormalOld(u, v);
 	// u \in [knotM[c], knotM[c + 1])
 	// v \in [knotN[d], knotN[d + 1])
 	int p = u_p, q = v_p;
@@ -145,7 +173,7 @@ Vertex NURBS::evaluateWithNormal(float u, float v) {
 	// Compute along u direction
 	for(int i = c - p; i <= c - s; i++) {
 		for(int j = d - q; j <= d - t; j++) {
-			homo_points_on_v[j - (d - q)] = {controlPoints[i][j].x(), controlPoints[i][j].y(), controlPoints[i][j].z(), weight[i][j]};
+			homo_points_on_v[j - (d - q)] = toHomogeneous(controlPoints[i][j], weight[i][j]);
 		}
 		for(int r = 1; r <= q - t; r++) {
 			for(int _i = d - t; _i >= d - q + r; _i--) {
@@ -176,7 +204,7 @@ Vertex NURBS::evaluateWithNormal(float u, float v) {
 	// Compute along v direction
 	for(int j = d - q; j <= d - t; j++) {
 		for(int i = c - p; i <= c - s; i++) {
-			homo_points_on_u[i - (c - p)] = {controlPoints[i][j].x(), controlPoints[i][j].y(), controlPoints[i][j].z(), weight[i][j]};
+			homo_points_on_u[i - (c - p)] = toHomogeneous(controlPoints[i][j], weight[i][j]);
 		}
 		for(int r = 1; r <= p - s; r++) {
 			for(int _i = c - s; _i >= c - p + r; _i--) {
@@ -204,10 +232,10 @@ Vertex NURBS::evaluateWithNormal(float u, float v) {
 		v_control_point = alpha * homo_points_on_v[index] + (1 - alpha) * homo_points_on_v[index - 1];
 	}
 
-	Vec3f point = u_control_point.head<3>() / u_control_point.w();
-	Vec3f	v_point = v_control_point.head<3>() / v_control_point.w();
-	Vec3f u_point_next = u_control_point_next.head<3>() / u_control_point_next.w();
-	Vec3f v_point_next = v_control_point_next.head<3>() / v_control_point_next.w();
+	Vec3f point = fromHomogeneous(u_control_point);
+	Vec3f v_point = fromHomogeneous(v_control_point);
+	Vec3f u_point_next = fromHomogeneous(u_control_point_next);
+	Vec3f v_point_next = fromHomogeneous(v_control_point_next);
 	Vec3f derivative_u = p * u_control_point_next.w() / ((knotM[c + 1] - u) * u_control_point.w()) * (u_point_next - point);
 	Vec3f derivative_v = q * v_control_point_next.w() / ((knotN[d + 1] - v) * u_control_point.w()) * (v_point_next - point);
 	Vec3f normal = derivative_u.cross(derivative_v).normalized();
@@ -218,22 +246,9 @@ Vertex NURBS::evaluateWithNormal(float u, float v) {
 		std::cout << "ERROR: evaluate self error!!" << std::endl;
 		exit(-1);
 	}
-	Vertex evaluate_old = evaluateWithNormalOld(controlPoints, weight, knotM, knotN, u, v, k, l);
-	float EPS = 1e-3;
+	Vertex evaluate_old = evaluateWithNormalOld(u, v);
+	// float EPS = 1e-5;
 	if((evaluate_old.position - point).norm() > EPS) {
-		std::cout << "ERROR: evaluate position error!!" << std::endl;
-		std::cout << "Position" << std::endl;
-		std::cout << evaluate_old.position << std::endl;
-		std::cout << point << std::endl;
-		std::cout << "Derivative on u" << std::endl;
-		std::cout << evaluate_old.derivative_u << std::endl;
-		std::cout << derivative_u << std::endl;
-		std::cout << "Derivative on v" << std::endl;
-		std::cout << evaluate_old.derivative_v << std::endl;
-		std::cout << derivative_v << std::endl;
-		std::cout << "Normal" << std::endl;
-		std::cout << evaluate_old.derivative_u.cross(evaluate_old.derivative_v) << std::endl;
-		std::cout << derivative_u.cross(derivative_v) << std::endl;
 		exit(-1);
 	}
 	// std::cout << "Position" << std::endl;
@@ -267,12 +282,185 @@ Vertex NURBS::evaluateWithNormal(float u, float v) {
 	if((evaluate_old.normal - normal).norm() > EPS || 
 		 (evaluate_old.derivative_v - derivative_v).norm() > EPS || 
 		 (evaluate_old.derivative_u - derivative_u).norm() > EPS) {
+		std::cout << "ERROR: evaluate position error!!" << std::endl;
+		std::cout << "Position" << std::endl;
+		std::cout << evaluate_old.position << std::endl;
+		std::cout << point << std::endl;
+		std::cout << "Derivative on u" << std::endl;
+		std::cout << evaluate_old.derivative_u << std::endl;
+		std::cout << derivative_u << std::endl;
+		std::cout << "Derivative on v" << std::endl;
+		std::cout << evaluate_old.derivative_v << std::endl;
+		std::cout << derivative_v << std::endl;
+		std::cout << "Normal" << std::endl;
+		std::cout << evaluate_old.derivative_u.cross(evaluate_old.derivative_v) << std::endl;
+		std::cout << derivative_u.cross(derivative_v) << std::endl;
 		std::cout << u << " " << v << std::endl;
 		std::cout << s << " " << t << std::endl;
 	}
 #endif
 // #undef MY_DEBUG
 	return {point, normal, derivative_u, derivative_v};
+}
+
+
+
+
+Vertex NURBS::evaluateWithNormal(double u, double v) {
+	// return evaluateWithNormalOld(u, v);
+	// u \in [knotM[c], knotM[c + 1])
+	// v \in [knotN[d], knotN[d + 1])
+	int p = u_p, q = v_p;
+	int c = upper_bound(knotM.begin(), knotM.end(), u) - knotM.begin() - 1;
+	int d = upper_bound(knotN.begin(), knotN.end(), v) - knotN.begin() - 1;
+	int s = 0, t = 0;
+	for(int i = c; i >= 0 && std::fabs(knotM[i] - u) < EQ_EPS; i--) {
+		s++;
+	}
+	for(int i = d; i >= 0 && std::fabs(knotN[i] - v) < EQ_EPS; i--) {
+		t++;
+	}
+
+	std::vector<Vec4d> homo_points_on_u(p - s + 1);
+	std::vector<Vec4d> homo_points_on_v(q - t + 1);
+	
+	Vec4d u_control_point, u_control_point_next;
+	Vec4d v_control_point, v_control_point_next;
+	// Compute along u direction
+	for(int i = c - p; i <= c - s; i++) {
+		for(int j = d - q; j <= d - t; j++) {
+			homo_points_on_v[j - (d - q)] = toHomogeneous(to3d(controlPoints[i][j]), (double)weight[i][j]);
+		}
+		for(int r = 1; r <= q - t; r++) {
+			for(int _i = d - t; _i >= d - q + r; _i--) {
+				double alpha = (v - knotN[_i]) / (knotN[_i + q - r + 1] - knotN[_i]);
+				int index = _i - (d - q);
+				homo_points_on_v[index] = alpha * homo_points_on_v[index] + (1 - alpha) * homo_points_on_v[index - 1];
+			}
+		}
+		homo_points_on_u[i - (c - p)] = homo_points_on_v[d - t - (d - q)];
+	}
+	
+	for(int r = 1; r < p - s; r++) {
+		for(int i = c - s; i >= c - p + r; i--) {
+			double alpha = (u - knotM[i]) / (knotM[i + p - r + 1] - knotM[i]);
+			int index = i - (c - p);
+			homo_points_on_u[index] = alpha * homo_points_on_u[index] + (1 - alpha) * homo_points_on_u[index - 1];
+		}
+	}
+
+	{
+		int r = p - s, i = c - s;
+		double alpha = (u - knotM[i]) / (knotM[i + p - r + 1] - knotM[i]);
+		int index = i - (c - p);
+		u_control_point_next = homo_points_on_u[index];
+		u_control_point = alpha * homo_points_on_u[index] + (1 - alpha) * homo_points_on_u[index - 1];
+	}
+
+	// Compute along v direction
+	for(int j = d - q; j <= d - t; j++) {
+		for(int i = c - p; i <= c - s; i++) {
+			homo_points_on_u[i - (c - p)] = toHomogeneous(to3d(controlPoints[i][j]), (double)weight[i][j]);
+		}
+		for(int r = 1; r <= p - s; r++) {
+			for(int _i = c - s; _i >= c - p + r; _i--) {
+				double alpha = (u - knotM[_i]) / (knotM[_i + p - r + 1] - knotM[_i]);
+				int index = _i - (c - p);
+				homo_points_on_u[index] = alpha * homo_points_on_u[index] + (1 - alpha) * homo_points_on_u[index - 1];
+			}
+		}
+		homo_points_on_v[j - (d - q)] = homo_points_on_u[c - s - (c - p)];
+	}
+
+	for(int r = 1; r < q - t; r++) {
+		for(int i = d - t; i >= d - q + r; i--) {
+				double alpha = (v - knotN[i]) / (knotN[i + q - r + 1] - knotN[i]);
+				int index = i - (d - q);
+				homo_points_on_v[index] = alpha * homo_points_on_v[index] + (1 - alpha) * homo_points_on_v[index - 1];
+		}
+	}
+
+	{
+		int r = q - t, i = d - t;
+		double alpha = (v - knotN[i]) / (knotN[i + q - r + 1] - knotN[i]);
+		int index = i - (d - q);
+		v_control_point_next = homo_points_on_v[index];
+		v_control_point = alpha * homo_points_on_v[index] + (1 - alpha) * homo_points_on_v[index - 1];
+	}
+
+	Vec3d point = fromHomogeneous(u_control_point);
+	Vec3d v_point = fromHomogeneous(v_control_point);
+	Vec3d u_point_next = fromHomogeneous(u_control_point_next);
+	Vec3d v_point_next = fromHomogeneous(v_control_point_next);
+	Vec3d derivative_u = p * u_control_point_next.w() / ((knotM[c + 1] - u) * u_control_point.w()) * (u_point_next - point);
+	Vec3d derivative_v = q * v_control_point_next.w() / ((knotN[d + 1] - v) * u_control_point.w()) * (v_point_next - point);
+	Vec3d normal = derivative_u.cross(derivative_v).normalized();
+
+// #define MY_DEBUG
+#ifdef MY_DEBUG
+	if((point - v_point).norm() > EPS) {
+		std::cout << "ERROR: evaluate self error!!" << std::endl;
+		exit(-1);
+	}
+	Vertex evaluate_old = evaluateWithNormalOld(u, v);
+	// double EPS = 1e-5;
+	if((evaluate_old.position - to3f(point)).norm() > EPS) {
+		exit(-1);
+	}
+	// std::cout << "Position" << std::endl;
+	// std::cout << evaluate_old.position << std::endl;
+	// std::cout << point << std::endl;
+	// std::cout << "Derivative on u" << std::endl;
+	// std::cout << evaluate_old.derivative_u << std::endl;
+	// std::cout << derivative_u << std::endl;
+	// std::cout << "Derivative on v" << std::endl;
+	// std::cout << evaluate_old.derivative_v << std::endl;
+	// std::cout << derivative_v << std::endl;
+	// std::cout << "Normal" << std::endl;
+	// std::cout << evaluate_old.derivative_u.cross(evaluate_old.derivative_v) << std::endl;
+	// std::cout << derivative_u.cross(derivative_v) << std::endl;
+	// if((evaluate_old.derivative_u - derivative_u).norm() > EPS) {
+	// 	std::cout << "ERROR: evaluate derivative_u error!!" << std::endl;
+	// 	exit(-1);
+	// }
+	// if((evaluate_old.derivative_v - derivative_v).norm() > EPS) {
+	// 	std::cout << "ERROR: evaluate derivate_v error!!" << std::endl;
+	// 	std::cout << "Derivative on v" << std::endl;
+	// 	std::cout << evaluate_old.derivative_v << std::endl;
+	// 	std::cout << derivative_v << std::endl;
+	// 	exit(-1);
+	// }
+	// if((evaluate_old.normal - normal).norm() > EPS) {
+	// 	std::cout << "ERROR: evaluate normal error!!" << std::endl;
+	// 	std::cout << u << " " << v << std::endl;
+	// 	// exit(-1);
+	// }
+	float EPS = 1e-3;
+	if((evaluate_old.normal - to3f(normal)).norm() > EPS || 
+		 (evaluate_old.derivative_v - to3f(derivative_v)).norm() > EPS || 
+		 (evaluate_old.derivative_u - to3f(derivative_u)).norm() > EPS) {
+		std::cout << "ERROR: evaluate position error!!" << std::endl;
+		std::cout << "Position" << std::endl;
+		std::cout << evaluate_old.position << std::endl;
+		std::cout << point << std::endl;
+		std::cout << "Derivative on u" << std::endl;
+		std::cout << evaluate_old.derivative_u << std::endl;
+		std::cout << derivative_u << std::endl;
+		std::cout << "Derivative on v" << std::endl;
+		std::cout << evaluate_old.derivative_v << std::endl;
+		std::cout << derivative_v << std::endl;
+		std::cout << "Normal" << std::endl;
+		std::cout << evaluate_old.derivative_u.cross(evaluate_old.derivative_v) << std::endl;
+		std::cout << derivative_u.cross(derivative_v) << std::endl;
+		std::cout << u << " " << v << std::endl;
+		std::cout << s << " " << t << std::endl;
+		std::cout << (evaluate_old.normal - to3f(normal)).norm() << " " 
+		<< (evaluate_old.derivative_v - to3f(derivative_v)).norm() << " "
+		<< (evaluate_old.derivative_u - to3f(derivative_u)).norm() << std::endl;
+	}
+#endif
+// #undef MY_DEBUG
+	return {to3f(point), to3f(normal), to3f(derivative_u), to3f(derivative_v)};
 }
 
 void NURBS::refine() {
@@ -335,6 +523,61 @@ void NURBS::refine() {
 		}
 	}
 
+	std::vector<std::vector<Vec4f>> homoControlPoints(u_n + 1, std::vector<Vec4f>(v_n + 1));
+
+	for(int i = 0; i <= u_n; i++) {
+		for(int j = 0; j <= v_n; j++) 
+			homoControlPoints[i][j] = toHomogeneous(controlPoints[i][j], weight[i][j]);
+	}
+
+	// Insert knots in knotV_insert and generate new control points
+	for(int i = 0; i <= u_n; i++) {
+		auto tmpKnot = knotN;
+		auto tmpN = v_n;
+		auto tmpM = v_m;
+		for(float insert_knot : knotV_insert) 
+			insertKnot(tmpKnot, homoControlPoints[i], v_p, tmpM, tmpN, insert_knot);
+		if(i == u_n) {
+			knotN = tmpKnot;
+			v_n = tmpN;
+			v_m = tmpM;
+		}
+	}
+
+	// Insert knots in knotU_insert and generate new control points
+	std::vector<std::vector<Vec4f>> newHomoControlPoints(v_n + 1, std::vector<Vec4f>(u_n + 1));
+	for(int i = 0; i <= v_n; i++) {
+		for(int j = 0; j <= u_n; j++) {
+			newHomoControlPoints[i][j] = homoControlPoints[j][i];
+		}
+	}
+
+	for(int i = 0; i <= v_n; i++) {
+		auto tmpKnot = knotM;
+		auto tmpN = u_n;
+		auto tmpM = u_m;
+		for(float insert_knot : knotU_insert) 
+			insertKnot(tmpKnot, newHomoControlPoints[i], u_p, tmpM, tmpN, insert_knot);
+		if(i == v_n) {
+			knotM = tmpKnot;
+			u_n = tmpN;
+			u_m = tmpM;
+		}
+	}
+
+	// Ressign k and l
+	k = u_p + 1;
+	l = v_p + 1;
+
+	// Reassign controlPoints
+	controlPoints.resize(u_n + 1);
+	for(int i = 0; i <= u_n; i++) {
+		controlPoints[i].resize(v_n + 1);
+		for(int j = 0; j <= v_n; j++) {
+			controlPoints[i][j] = fromHomogeneous(newHomoControlPoints[j][i]);
+			weight[i][j] = newHomoControlPoints[j][i].w();
+		}
+	}
 }
 
 std::shared_ptr<TriangleMesh> NURBS::generateMesh(SamplingMode mode, int sampleMSize, int sampleNSize) {
@@ -364,7 +607,7 @@ std::shared_ptr<TriangleMesh> NURBS::generateMesh(SamplingMode mode, int sampleM
         if (j == sampleNSize - 1) {
           v -= 1e-5;
         }
-        auto vertex = evaluateWithNormal(u, v);
+        auto vertex = evaluateWithNormal((double)u, (double)v);
         vertices[i * sampleNSize + j] = 0.3f * vertex.position + Vec3f(-0.5, 0.7f, 0);
         normals[i * sampleNSize + j] = -vertex.normal;
         // DEBUG_VEC(vertex.normal);
@@ -421,4 +664,22 @@ std::vector<std::vector<float>> readWeights(const std::string &path, int m, int 
     }
   }
   return std::move(result);
+}
+
+void insertKnot(std::vector<float> &knot, 
+								std::vector<Vec4f> &homoControlPoints, 
+								int &p, int &m, int &n, float u) {
+	int k = upper_bound(knot.begin(), knot.end(), u) - knot.begin() - 1;
+	std::vector<Vec4f> q(p);
+	for(int i = k - p + 1; i <= k; i++) {
+		float alpha = (u - knot[i]) / (knot[i + p] - knot[i]);
+		q[i - (k - p + 1)] = (1 - alpha) * homoControlPoints[i - 1] + alpha * homoControlPoints[i];
+	}
+	for(int i = k - p + 1; i < k; i++) {
+		homoControlPoints[i] = q[i - (k - p + 1)];
+	}
+	homoControlPoints.insert(homoControlPoints.begin() + k, q[k - (k - p + 1)]);
+	knot.insert(knot.begin() + k + 1, u);
+	m++;
+	n++;
 }

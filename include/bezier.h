@@ -28,12 +28,13 @@ public:
     void setKnotN(const std::vector<float> &knot);
     std::pair<float, float> evaluateN(std::vector<float> &knot, float t, int i, int k);
     Vertex evaluateWithNormal(float u, float v);
+		Vertex evaluateWithNormal(double u, double v);
 		Vertex evaluateWithNormalOld(float u, float v);
 		void refine();
     std::shared_ptr<TriangleMesh> generateMesh(SamplingMode mode = Uniform, int sampleMSize = 100, int sampleNSize = 100);
 };
 
 std::vector<std::vector<Vec3f>> readControlPoints(const std::string &path, int m, int n);
-
 std::vector<std::vector<float>> readWeights(const std::string &path, int m, int n);
+void insertKnot(std::vector<float> &knot, std::vector<Vec4f> &controlPoints, int &p, int &m, int &n, float u);
 #endif //CS171_ASSIGNMENT4_BEZIER_H
