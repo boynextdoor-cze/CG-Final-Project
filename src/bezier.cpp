@@ -275,6 +275,68 @@ Vertex NURBS::evaluateWithNormal(float u, float v) {
 	return {point, normal, derivative_u, derivative_v};
 }
 
+void NURBS::refine() {
+	static const int C = 3;
+	std::vector<float> knotU_insert;
+	std::vector<float> knotV_insert;
+	
+	// calculate additional refined knots in each row
+	{
+		std::vector<Vec3f> V(u_n + 1), A(u_n + 1);
+		for(int i = u_p; i < u_m - u_p; i++) {
+			if(knotM[i] == knotM[i + 1])
+				continue;
+			int max_n = 0;
+			for(int ctrl_j = 0; ctrl_j <= v_n; ctrl_j++) {
+				float max_A = 0;
+				float sum_V = 0;
+				for(int ctrl_i = i - u_p + 1; ctrl_i <= i; ctrl_i++) 
+					V[ctrl_i] = u_p / (knotM[ctrl_i + u_p] - knotM[ctrl_i]) * (controlPoints[ctrl_i][ctrl_j] - controlPoints[ctrl_i - 1][ctrl_j]);
+				for(int ctrl_i = i - u_p + 2; ctrl_i <= i; ctrl_i++) 
+					A[ctrl_i] = (u_p - 1) / (knotM[ctrl_i + u_p - 1] - knotM[ctrl_i]) * (V[ctrl_i] - V[ctrl_i - 1]);
+				for(int j = i - u_p + 1; j <= i; j++) 
+					sum_V += V[j].norm();
+				for(int j = i - u_p + 2; j <= i; j++) 
+					max_A = std::max(max_A, A[j].norm());
+				sum_V = std::sqrt(sum_V / u_p);
+				max_n = std::max(max_n, (int)std::ceil(C * max_A * std::pow(knotM[i + 1] - knotM[i], 1.5f) / sum_V));
+			}
+			float segment = (knotM[i + 1] - knotM[i]) / (float)(max_n + 1);
+			for(float new_knot = knotM[i] + segment; new_knot < knotM[i + 1]; new_knot += segment) {
+				knotU_insert.push_back(new_knot);
+			}
+		}
+	}
+
+	// calculate additional refined knots in each column
+	{
+		std::vector<Vec3f> V(v_n + 1), A(v_n + 1);
+		for(int i = v_p; i < v_m - v_p; i++) {
+			if(knotN[i] == knotN[i + 1]) 
+				continue;
+			int max_n = 0;
+			for(int ctrl_i = 0; ctrl_i <= u_n; ctrl_i++) {
+				float max_A = 0;
+				float sum_V = 0;
+				for(int ctrl_j = i - v_p + 1; ctrl_j <= i; ctrl_j++)
+					V[ctrl_j] = v_p / (knotN[ctrl_j + v_p] - knotN[ctrl_j]) * (controlPoints[ctrl_i][ctrl_j] - controlPoints[ctrl_i][ctrl_j - 1]);
+				for(int ctrl_j = i - v_p + 2; ctrl_j <= i; ctrl_j++)
+					A[ctrl_j] = (v_p - 1) / (knotN[ctrl_j + v_p - 1] - knotN[ctrl_j]) * (V[ctrl_j] - V[ctrl_j - 1]);
+				for(int j = i - v_p + 1; j <= i; j++)
+					sum_V += V[j].norm();
+				for(int j = i - v_p + 2; j <= i; j++)
+					max_A = std::max(max_A, A[j].norm());
+				sum_V = std::sqrt(sum_V / v_p);
+				max_n = std::max(max_n, (int)std::ceil(C * max_A * std::pow(knotN[i + 1] - knotN[i], 1.5f) / sum_V));
+			}
+			float segment = (knotN[i + 1] - knotN[i]) / (float)(max_n + 1);
+			for(float new_knot = knotN[i] + segment; new_knot < knotN[i + 1]; new_knot += segment)
+				knotV_insert.push_back(new_knot);
+		}
+	}
+
+}
+
 std::shared_ptr<TriangleMesh> NURBS::generateMesh(SamplingMode mode, int sampleMSize, int sampleNSize) {
   std::vector<Vec3f> vertices;
   std::vector<Vec3f> normals;
