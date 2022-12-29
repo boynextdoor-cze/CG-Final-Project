@@ -467,7 +467,10 @@ void NURBS::refine() {
 	static const int C = 3;
 	std::vector<float> knotU_insert;
 	std::vector<float> knotV_insert;
-	
+#ifdef MY_DEBUG
+	std::cout << "start refinement" << std::endl;
+	std::cout << "compute additional refined knots in each row" << std::endl;
+#endif
 	// calculate additional refined knots in each row
 	{
 		std::vector<Vec3f> V(u_n + 1), A(u_n + 1);
@@ -495,7 +498,9 @@ void NURBS::refine() {
 			}
 		}
 	}
-
+#ifdef MY_DEBUG
+	std::cout << "compute additional refined knots in each column" << std::endl;
+#endif
 	// calculate additional refined knots in each column
 	{
 		std::vector<Vec3f> V(v_n + 1), A(v_n + 1);
@@ -522,7 +527,9 @@ void NURBS::refine() {
 				knotV_insert.push_back(new_knot);
 		}
 	}
-
+#ifdef MY_DEBUG
+	std::cout << "recompute control points while inserting knots" << std::endl;
+#endif
 	std::vector<std::vector<Vec4f>> homoControlPoints(u_n + 1, std::vector<Vec4f>(v_n + 1));
 
 	for(int i = 0; i <= u_n; i++) {
@@ -543,7 +550,9 @@ void NURBS::refine() {
 			v_m = tmpM;
 		}
 	}
-
+#ifdef MY_DEBUG
+	std::cout << "knots in knotV_insert have been inserted" << std::endl;
+#endif
 	// Insert knots in knotU_insert and generate new control points
 	std::vector<std::vector<Vec4f>> newHomoControlPoints(v_n + 1, std::vector<Vec4f>(u_n + 1));
 	for(int i = 0; i <= v_n; i++) {
@@ -564,20 +573,37 @@ void NURBS::refine() {
 			u_m = tmpM;
 		}
 	}
-
+#ifdef MY_DEBUG
+	std::cout << "knots in knotU_insert have been inserted" << std::endl;
+#endif
 	// Ressign k and l
 	k = u_p + 1;
 	l = v_p + 1;
 
 	// Reassign controlPoints
 	controlPoints.resize(u_n + 1);
+	weight.resize(u_n + 1);
 	for(int i = 0; i <= u_n; i++) {
 		controlPoints[i].resize(v_n + 1);
+		weight[i].resize(v_n + 1);
 		for(int j = 0; j <= v_n; j++) {
 			controlPoints[i][j] = fromHomogeneous(newHomoControlPoints[j][i]);
 			weight[i][j] = newHomoControlPoints[j][i].w();
 		}
 	}
+#ifdef MY_DEBUG
+	printf("u_m is %d, u_n is %d, u_p is %d\n", u_m, u_n, u_p);
+	for(auto knot : knotM) 
+		std::cout << knot << " ";
+	std::cout << std::endl;
+
+	printf("v_m is %d, v_n is %d, v_p is %d\n", v_m, v_n, v_p);
+	for(auto knot : knotN) 
+		std::cout << knot << " ";
+	std::cout << std::endl;
+
+	std::cout << "complete refinement" << std::endl;
+#endif
 }
 
 std::shared_ptr<TriangleMesh> NURBS::generateMesh(SamplingMode mode, int sampleMSize, int sampleNSize) {
