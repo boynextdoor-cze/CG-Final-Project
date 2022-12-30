@@ -8,6 +8,18 @@
 #include <algorithm>
 #include <random>
 
+const float epsN = 1e-9;
+
+// Helper functions
+void testSurfacePatchBound(std::shared_ptr<NURBS> &surface, int i, int j);
+Vec4f toHomogeneous(Vec3f p, float w);
+Vec3f fromHomogeneous(Vec4f p);
+Vec4d toHomogeneous(Vec3d p, double w);
+Vec3d fromHomogeneous(Vec4d p);
+Vec3f to3f(Vec3d p);
+Vec3d to3d(Vec3f p);
+float multiplyForBSplineBasisFunction(float a, float b, float c);
+
 Vec4f toHomogeneous(Vec3f p, float w) {
 	p *= w;
 	return {p.x(), p.y(), p.z(), w};
@@ -36,8 +48,6 @@ Vec3d to3d(Vec3f p) {
 	return {(double)p.x(), (double)p.y(), (double)p.z()};
 }
 
-void testSurfacePatchBound(std::shared_ptr<NURBS> &surface, int i, int j);
-
 NURBS::NURBS(int m, int n, int _k, int _l) {
   controlPoints.resize(m + 1);
   for (auto &tmpControlPoints : controlPoints) {
@@ -56,7 +66,56 @@ NURBS::NURBS(int m, int n, int _k, int _l) {
 	v_m = n + l;
 	v_n = n;
 	v_p = _l - 1;
+}
 
+NURBS::NURBS(int _m, int _n, int _k, int _l, 
+			const std::vector<std::vector<Vec3f>> &_controlPoints, 
+			const std::vector<std::vector<float>> &_weight, 
+			const std::vector<float> &_knotM, 
+			const std::vector<float> &_knotN,
+			std::shared_ptr<BSDF> &_bsdf) :
+			u_m(_m + _k), u_n(_m), u_p(_k - 1), 
+			v_m(_n + _l), v_n(_n), v_p(_l - 1),
+			k(_k), l(_l),
+			controlPoints(_controlPoints), weight(_weight),
+			knotM(_knotM), knotN(_knotN), bsdf(_bsdf) {
+	if(u_m < 0 || u_n < 0 || u_p < 0 ||
+		 v_m < 0 || v_n < 0 || v_p < 0 ||
+		 controlPoints.size() != u_n + 1 ||
+		 controlPoints.back().size() != v_n + 1 ||
+		 weight.size() != u_n + 1 ||
+		 weight.back().size() != v_n + 1 ||
+		 knotM.size() != u_m + 1 ||
+		 knotN.size() != v_m + 1) {
+		std::cout << "ERROR::NURBS: Initialize error!" << std::endl;
+		exit(-1);
+	}
+}
+
+NURBS::NURBS(int _m, int _n, int _k, int _l, 
+			const std::vector<std::vector<Vec3f>> &_controlPoints, 
+			const std::vector<float> &_knotM, 
+			const std::vector<float> &_knotN,
+			std::shared_ptr<BSDF> &_bsdf) :
+			u_m(_m + _k), u_n(_m), u_p(_k - 1), 
+			v_m(_n + _l), v_n(_n), v_p(_l - 1),
+			k(_k), l(_l),
+			controlPoints(_controlPoints),
+			knotM(_knotM), knotN(_knotN), bsdf(_bsdf) {
+	
+	weight = std::vector<std::vector<float>>(u_n + 1, std::vector<float>(v_n + 1, 1.0f));
+	
+	if(u_m < 0 || u_n < 0 || u_p < 0 ||
+		 v_m < 0 || v_n < 0 || v_p < 0 ||
+		 controlPoints.size() != u_n + 1 ||
+		 controlPoints.back().size() != v_n + 1 ||
+		 weight.size() != u_n + 1 ||
+		 weight.back().size() != v_n + 1 ||
+		 knotM.size() != u_m + 1 ||
+		 knotN.size() != v_m + 1) {
+		std::cout << "ERROR::NURBS: Initialize error!" << std::endl;
+		exit(-1);
+	}
 }
 
 void NURBS::setControlPoint(int i, int j, Vec3f point) {
@@ -89,14 +148,32 @@ void NURBS::setKnotN(const std::vector<float> &knot) {
   knotN = knot;
 }
 
-const float epsN = 1e-9;
+void NURBS::setMaterial(std::shared_ptr<BSDF> &new_bsdf) { bsdf = new_bsdf; }
 
-float multiplyForBSplineBasisFunction(float a, float b, float c) {
-  if (std::fabs(c) < epsN) {
-    assert(std::fabs(a) < epsN);
-    return 0.0f;
-  }
-  return a * b / c;
+void NURBS::refineAndInitIntervalObject() {
+	refine();
+	std::shared_ptr<NURBS> surface = shared_from_this();
+	for(int i = u_p; i < u_m - u_p; i++) {
+		for(int j = v_p; j < v_m - v_p; j++) {
+			if (std::fabs(knotM[i + 1] - knotM[i]) < EQ_EPS || 
+					std::fabs(knotN[j + 1] - knotN[j]) < EQ_EPS)
+				continue;
+			interval_objects.push_back(std::make_shared<IntervalObject>(surface, i, j, bsdf));
+			bound = Union(bound, interval_objects.back()->getBounds());
+		}
+	}
+}
+
+void NURBS::buildBVH() {
+	std::vector<ObjectPtr> objects(interval_objects.size());
+	for(int i = 0; i < objects.size(); i++) 
+		objects[i] = interval_objects[i];
+	bvh = std::make_shared<BVHAccel>(objects, 5);
+}
+
+void NURBS::init() {
+	refineAndInitIntervalObject();
+	buildBVH();
 }
 
 std::pair<float, float> NURBS::evaluateN(std::vector<float> &knot, float t, int i, int k) {
@@ -305,9 +382,6 @@ Vertex NURBS::evaluateWithNormal(float u, float v) {
 // #undef MY_DEBUG
 	return {point, normal, derivative_u, derivative_v};
 }
-
-
-
 
 Vertex NURBS::evaluateWithNormal(double u, double v) {
 	// return evaluateWithNormalOld(u, v);
@@ -712,6 +786,21 @@ std::shared_ptr<TriangleMesh> NURBS::generateMesh(SamplingMode mode, int sampleM
   return std::make_shared<TriangleMesh>(vertices, normals, v_idx, v_idx);
 }
 
+Bounds3 NURBS::getBounds() const { return bound; }
+
+bool NURBS::intersect(const Ray &ray, Interaction &interaction) const {
+	if(bvh != nullptr) {
+		return bvh->getIntersection(ray, interaction);
+	} else {
+		if(!bound.IntersectP(ray)) return false;
+		bool result = false;
+		for(auto &interval_object : interval_objects) {
+			result |= interval_object->intersect(ray, interaction);
+		}
+		return result;
+	}
+}
+
 std::vector<std::vector<Vec3f>> readControlPoints(const std::string &path, int m, int n) {
   std::vector<std::vector<Vec3f>> result(m + 1, std::vector<Vec3f>(n + 1, Vec3f(0.0f, 0.0f, 0.0f)));
 //  std::ifstream inputFile(getPath(path));
@@ -820,7 +909,6 @@ IntervalObject::IntervalObject(std::shared_ptr<NURBS> &_surface,
 															 int _i, int _j, 
 															 std::shared_ptr<BSDF> _bsdf) 
 	: surface(_surface), i(_i), j(_j), bsdf(_bsdf) {
-	std::cout << "Initialize interval object" << std::endl;
 	updateBounds();
 }
 
@@ -999,4 +1087,12 @@ void testSurfacePatchBound(std::shared_ptr<NURBS> &surface, int i, int j) {
 			exit(-1);
 		}
 	}
+}
+
+float multiplyForBSplineBasisFunction(float a, float b, float c) {
+  if (std::fabs(c) < epsN) {
+    assert(std::fabs(a) < epsN);
+    return 0.0f;
+  }
+  return a * b / c;
 }

@@ -14,26 +14,53 @@ enum SamplingMode {
     Adaptive,
 };
 
-class NURBS : public std::enable_shared_from_this<NURBS> {
+class NURBS : public std::enable_shared_from_this<NURBS>, public Object {
 public:
-    std::vector<std::vector<Vec3f>> controlPoints;
-    std::vector<std::vector<float>> weight;
-    std::vector<float> knotM, knotN;
-    int k, l, u_m, v_m, u_n, v_n, u_p, v_p;
-    NURBS(int m, int n, int _k, int _l);
-    void setControlPoint(int i, int j, Vec3f point);
-    void setControlPoint(const std::vector<std::vector<Vec3f>> &_controlPoints);
-    void setWeight(int i, int j, float w);
-    void setWeight(const std::vector<std::vector<float>> &w);
-    void setKnotM(const std::vector<float> &knot);
-    void setKnotN(const std::vector<float> &knot);
-    std::pair<float, float> evaluateN(std::vector<float> &knot, float t, int i, int k);
-    Vertex evaluateWithNormal(float u, float v);
-		Vertex evaluateWithNormal(double u, double v);
-		Vertex evaluateWithNormalOld(float u, float v);
-		void refine();
-		std::vector<Vec4f> getHomoControlPoints(int i, int j) const;
-    std::shared_ptr<TriangleMesh> generateMesh(SamplingMode mode = Uniform, int sampleMSize = 100, int sampleNSize = 100);
+	NURBS() = default;
+	~NURBS() = default;
+
+	NURBS(int m, int n, int _k, int _l);
+	NURBS(int m, int n, int k, int l, 
+				const std::vector<std::vector<Vec3f>> &_controlPoints, 
+				const std::vector<std::vector<float>> &_weight, 
+				const std::vector<float> &_knotM, 
+				const std::vector<float> &_knotN,
+				std::shared_ptr<BSDF> &bsdf);
+	NURBS(int m, int n, int k, int l, 
+				const std::vector<std::vector<Vec3f>> &_controlPoints, 
+				const std::vector<float> &_knotM, 
+				const std::vector<float> &_knotN,
+				std::shared_ptr<BSDF> &bsdf);
+
+	std::vector<std::vector<Vec3f>> controlPoints;
+	std::vector<std::vector<float>> weight;
+	std::vector<float> knotM, knotN;
+	int k, l, u_m, v_m, u_n, v_n, u_p, v_p;
+	Bounds3 bound;
+	std::shared_ptr<BSDF> bsdf;
+  BVHAccelPtr bvh;
+	std::vector<std::shared_ptr<IntervalObject>> interval_objects;
+
+	void setControlPoint(int i, int j, Vec3f point);
+	void setControlPoint(const std::vector<std::vector<Vec3f>> &_controlPoints);
+	void setWeight(int i, int j, float w);
+	void setWeight(const std::vector<std::vector<float>> &w);
+	void setKnotM(const std::vector<float> &knot);
+	void setKnotN(const std::vector<float> &knot);
+	void setMaterial(std::shared_ptr<BSDF> &new_bsdf);
+	void refineAndInitIntervalObject();
+	void buildBVH();
+	void init();
+
+	std::pair<float, float> evaluateN(std::vector<float> &knot, float t, int i, int k);
+	Vertex evaluateWithNormal(float u, float v);
+	Vertex evaluateWithNormal(double u, double v);
+	Vertex evaluateWithNormalOld(float u, float v);
+	void refine();
+	std::vector<Vec4f> getHomoControlPoints(int i, int j) const;
+	std::shared_ptr<TriangleMesh> generateMesh(SamplingMode mode = Uniform, int sampleMSize = 100, int sampleNSize = 100);
+	Bounds3 getBounds() const override;
+	bool intersect(const Ray &ray, Interaction &interaction) const override;
 };
 
 class IntervalObject : public Object {
