@@ -86,7 +86,7 @@ TriangleMesh::TriangleMesh(std::vector<Vec3f> _vertices,
 bool TriangleMesh::intersect(const Ray &ray, Interaction &interaction) const {
   if (bvh != nullptr) {
     // bvh->getIntersection(bvh->root, ray, interaction);
-    bvh->getIntersection(ray, interaction);
+    return bvh->getIntersection(ray, interaction);
   } else {
     // If you did not implement BVH
     // directly loop through all triangles in the mesh and test intersection for

@@ -36,6 +36,8 @@ class BVHNode;
 class BVHAccel;
 class Object;
 class Vertex;
+class NURBS;
+class IntervalObject;
 struct BVHObjectInfo;
 struct LinearBVHNode;
 

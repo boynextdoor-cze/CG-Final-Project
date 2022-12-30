@@ -14,7 +14,7 @@
 class Scene {
  public:
   Scene() = default;
-  void addObject(std::shared_ptr<TriangleMesh> &geometry);
+  void addObject(ObjectPtr geometry);
   [[nodiscard]] const std::shared_ptr<Light> &getLight() const;
   void setLight(const std::shared_ptr<Light> &new_light);
   bool isShadowed(Ray &shadow_ray, float light_dist = (float)1e10);
