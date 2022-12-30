@@ -1,6 +1,7 @@
 #include "accel.h"
 #include <iostream>
 #include <stdlib.h>
+#include <ctime>
 
 #undef NDEBUG
 #include <cassert>

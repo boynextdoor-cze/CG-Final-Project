@@ -15,9 +15,13 @@
 struct Vertex {
     Vec3f position;
     Vec3f normal;
-    Vertex(const Vec3f &_position = Vec3f(0, 0, 0), const Vec3f &_normal = Vec3f(0, 0, 0)) {
+		Vec3f derivative_u, derivative_v;
+    Vertex(const Vec3f &_position = Vec3f(0, 0, 0), const Vec3f &_normal = Vec3f(0, 0, 0), 
+					 const Vec3f &_derivative_u = Vec3f(0, 0, 0), const Vec3f &_derivative_v = Vec3f(0, 0, 0)) {
       position = _position;
       normal = _normal;
+			derivative_u = _derivative_u;
+			derivative_v = _derivative_v;
     }
 };
 

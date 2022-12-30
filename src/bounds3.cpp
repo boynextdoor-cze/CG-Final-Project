@@ -71,8 +71,8 @@ bool Bounds3::Overlaps(const Bounds3 &b1, const Bounds3 &b2) const
 
 bool Bounds3::Inside(const Vec3f &p, const Bounds3 &b) const
 {
-  return (p.x() >= b.pMin.x() && p.x() <= b.pMax.x() && p.y() >= b.pMin.y() &&
-          p.y() <= b.pMax.y() && p.z() >= b.pMin.z() && p.z() <= b.pMax.z());
+  return (p.x() >= b.pMin.x() - EPS && p.x() <= b.pMax.x() + EPS && p.y() >= b.pMin.y() - EPS &&
+          p.y() <= b.pMax.y() + EPS && p.z() >= b.pMin.z() - EPS && p.z() <= b.pMax.z() + EPS);
 }
 const Vec3f &Bounds3::operator[](int i) const
 {
