@@ -16,12 +16,15 @@ using Vec2f = Eigen::Vector2f;
 using Vec2i = Eigen::Vector2i;
 using Vec4f = Eigen::Vector4f;
 using Mat3f = Eigen::Matrix3f;
+using Vec4d = Eigen::Vector4d;
+using Vec3d = Eigen::Vector3d;
 
 constexpr float RAY_DEFAULT_MIN = 1e-5;
 constexpr float RAY_DEFAULT_MAX = 1e7;
 constexpr float PI = 3.141592653579f;
 constexpr float INV_PI = 0.31830988618379067154;
 constexpr float EPS = 1e-5;
+constexpr float EQ_EPS = 1e-10;
 
 class BSDF;
 class Sampler;
