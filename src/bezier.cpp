@@ -761,7 +761,8 @@ std::shared_ptr<TriangleMesh> NURBS::generateMesh(SamplingMode mode, int sampleM
           v -= 1e-5;
         }
         auto vertex = evaluateWithNormal((double)u, (double)v);
-        vertices[i * sampleNSize + j] = 0.3f * vertex.position + Vec3f(-0.5, 0.7f, 0);
+        // vertices[i * sampleNSize + j] = 0.3f * vertex.position + Vec3f(-0.5, 0.7f, 0);
+				vertices[i * sampleNSize + j] = vertex.position;
         normals[i * sampleNSize + j] = -vertex.normal;
         // DEBUG_VEC(vertex.normal);
       }
