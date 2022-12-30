@@ -12,6 +12,9 @@ struct Ray {
   /// min and max distance of the ray
   float t_min;
   float t_max;
+	/// parameter for ray nurbs
+	Vec3f n_1, n_2;
+	float d_1, d_2;
 
   explicit Ray(const Vec3f &o, const Vec3f &dir, float t_min = RAY_DEFAULT_MIN, float t_max = RAY_DEFAULT_MAX)
   : origin(o)
@@ -23,6 +26,15 @@ struct Ray {
       std::fabs(direction[1]) < (float)1e-10 ? (float)1e10 : 1.f / direction[1],
       std::fabs(direction[2]) < (float)1e-10 ? (float)1e10 : 1.f / direction[2]
     };
+		if(std::fabs(direction.x()) > std::fabs(direction.y()) && 
+			 std::fabs(direction.x()) > std::fabs(direction.z())) {
+			n_1 = {direction.y(), -direction.x(), 0.f};
+		} else {
+			n_1 = {0.f, direction.z(), -direction.y()};
+		}
+		n_2 = n_1.cross(direction);
+		d_1 = -n_1.dot(origin);
+		d_2 = -n_2.dot(origin);
   }
 
   [[nodiscard]] Vec3f operator()(float t) const {

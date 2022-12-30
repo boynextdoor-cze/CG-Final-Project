@@ -39,7 +39,8 @@ public:
 class IntervalObject : public Object {
 public:
 	IntervalObject() = default;
-	IntervalObject(std::shared_ptr<NURBS> &_surface, int _i, int _j);
+	IntervalObject(std::shared_ptr<NURBS> &_surface, int _i, int _j, std::shared_ptr<BSDF> bsdf = nullptr);
+	std::shared_ptr<BSDF> bsdf;
 	std::shared_ptr<NURBS> surface;
 	Bounds3 bound;
 	// surface patch [knotU[i], knotU[i + 1]) x [knotV[j], knotV[j + 1])

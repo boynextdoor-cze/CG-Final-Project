@@ -816,8 +816,10 @@ Bounds3 getCurveBounds(const std::vector<float> &knot,
 	return result;
 }
 
-IntervalObject::IntervalObject(std::shared_ptr<NURBS> &_surface, int _i, int _j) 
-	: surface(_surface), i(_i), j(_j) {
+IntervalObject::IntervalObject(std::shared_ptr<NURBS> &_surface, 
+															 int _i, int _j, 
+															 std::shared_ptr<BSDF> _bsdf) 
+	: surface(_surface), i(_i), j(_j), bsdf(_bsdf) {
 	std::cout << "Initialize interval object" << std::endl;
 	updateBounds();
 }
@@ -902,8 +904,72 @@ void IntervalObject::updateBounds() {
 
 Bounds3 IntervalObject::getBounds() const { return bound; }
 
+struct NewtonIteration {
+	NewtonIteration(double _u, double _v, 
+							const std::shared_ptr<NURBS> &surface, 
+							const Ray &ray) : u(_u), v(_v) {
+		p = surface->evaluateWithNormal(u, v);
+		F_1 = ray.n_1.dot(p.position) + ray.d_1;
+		F_2 = ray.n_2.dot(p.position) + ray.d_2;
+		norm = std::sqrt(F_1 * F_1 + F_2 * F_2);
+	}
+	double u, v;
+	double F_1, F_2;
+	double norm;
+	Vertex p;
+};
+
 bool IntervalObject::intersect(const Ray &ray, Interaction &interaction) const {
-	// TODO
+	static const int MAX_ITER = 7;
+	static std::random_device rd;
+	static std::mt19937 gen(rd());
+	static std::uniform_real_distribution<double> dis(0.0f, 1.0f);
+	double u_0 = 0.5f * (surface->knotM[i] + surface->knotM[i + 1]);
+	double v_0 = 0.5f * (surface->knotN[j] + surface->knotN[j + 1]);
+
+	NewtonIteration curIteration(u_0, v_0, surface, ray);
+	for(int iter = 0; iter < MAX_ITER; iter++) {
+		if(curIteration.norm < EPS) {
+			double t = (curIteration.p.position - ray.origin).dot(ray.direction);
+			if (t < ray.t_min || t > ray.t_max)
+				return false;
+			if (t >= interaction.dist + EPS)
+				return false;
+			
+			interaction.dist = t;
+			interaction.pos = ray(t);
+			interaction.normal = curIteration.p.normal;
+			interaction.material = bsdf;
+			interaction.type = Interaction::Type::GEOMETRY;
+
+			return true;
+		}
+
+		double J_11 = ray.n_1.dot(curIteration.p.derivative_u);
+		double J_12 = ray.n_1.dot(curIteration.p.derivative_v);
+		double J_21 = ray.n_2.dot(curIteration.p.derivative_u);
+		double J_22 = ray.n_2.dot(curIteration.p.derivative_v);
+		double det = J_11 * J_22 - J_12 * J_21;
+		if(std::fabs(det) < EPS) {
+			double next_u = curIteration.u + 0.1 * (u_0 - curIteration.u) * dis(gen);
+			double next_v = curIteration.v + 0.1 * (v_0 - curIteration.v) * dis(gen);
+			curIteration = NewtonIteration(next_u, next_u, surface, ray);
+		} else {
+			double invJ_11 = J_22, invJ_12 = -J_12, invJ_21 = -J_21, invJ_22 = J_11;
+			double next_u = curIteration.u - (invJ_11 * curIteration.F_1 + invJ_12 * curIteration.F_2) / det;
+			double next_v = curIteration.v - (invJ_21 * curIteration.F_1 + invJ_22 * curIteration.F_2) / det;
+			
+			if(next_u < surface->knotM[i] - EPS || next_u > surface->knotM[i + 1] + EPS || 
+				 next_v < surface->knotN[j] - EPS || next_v > surface->knotN[j + 1] + EPS)
+				return false;
+			
+			NewtonIteration nextIteration = NewtonIteration(next_u, next_v, surface, ray);
+			if(nextIteration.norm - curIteration.norm > EPS) 
+				return false;
+
+			curIteration = nextIteration;
+		}
+	}
 	return false;
 }
 
