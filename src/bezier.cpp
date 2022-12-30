@@ -6,6 +6,7 @@
 #include <fstream>
 #include <iostream>
 #include <algorithm>
+#include <random>
 
 Vec4f toHomogeneous(Vec3f p, float w) {
 	p *= w;
@@ -34,6 +35,8 @@ Vec3f to3f(Vec3d p) {
 Vec3d to3d(Vec3f p) {
 	return {(double)p.x(), (double)p.y(), (double)p.z()};
 }
+
+void testSurfacePatchBound(std::shared_ptr<NURBS> &surface, int i, int j);
 
 NURBS::NURBS(int m, int n, int _k, int _l) {
   controlPoints.resize(m + 1);
@@ -493,9 +496,8 @@ void NURBS::refine() {
 				max_n = std::max(max_n, (int)std::ceil(C * max_A * std::pow(knotM[i + 1] - knotM[i], 1.5f) / sum_V));
 			}
 			float segment = (knotM[i + 1] - knotM[i]) / (float)(max_n + 1);
-			for(float new_knot = knotM[i] + segment; new_knot < knotM[i + 1]; new_knot += segment) {
-				knotU_insert.push_back(new_knot);
-			}
+			for(int j = 1; j <= max_n; j++)
+				knotU_insert.push_back(knotM[i] + j * segment);
 		}
 	}
 #ifdef MY_DEBUG
@@ -523,8 +525,8 @@ void NURBS::refine() {
 				max_n = std::max(max_n, (int)std::ceil(C * max_A * std::pow(knotN[i + 1] - knotN[i], 1.5f) / sum_V));
 			}
 			float segment = (knotN[i + 1] - knotN[i]) / (float)(max_n + 1);
-			for(float new_knot = knotN[i] + segment; new_knot < knotN[i + 1]; new_knot += segment)
-				knotV_insert.push_back(new_knot);
+			for(int j = 1; j <= max_n; j++)
+				knotV_insert.push_back(knotN[i] + j * segment);
 		}
 	}
 #ifdef MY_DEBUG
@@ -591,6 +593,7 @@ void NURBS::refine() {
 			weight[i][j] = newHomoControlPoints[j][i].w();
 		}
 	}
+// #define MY_DEBUG
 #ifdef MY_DEBUG
 	printf("u_m is %d, u_n is %d, u_p is %d\n", u_m, u_n, u_p);
 	for(auto knot : knotM) 
@@ -604,28 +607,46 @@ void NURBS::refine() {
 
 	std::cout << "complete refinement" << std::endl;
 #endif
+// #undef MY_DEBUG
+
+// #define MY_TEST_ON
+#ifdef MY_TEST_ON
+	{
+		std::cout << "Test Start!" << std::endl;
+		std::shared_ptr<NURBS> surface = shared_from_this();
+		for(int i = u_p; i < u_m - u_p; i++) {
+			for(int j = v_p; j < v_m - v_p; j++) {
+				if (std::fabs(knotM[i + 1] - knotM[i]) < EQ_EPS || 
+						std::fabs(knotN[j + 1] - knotN[j]) < EQ_EPS)
+					continue;
+				testSurfacePatchBound(surface, i, j);
+			}
+		}
+	}
+#endif
+// #undef MY_TEST_ON
 }
 
 std::vector<Vec4f> NURBS::getHomoControlPoints(int i, int j) const {
-	if((i == -1) + (j == -1) != 1) {
-		std::cout << "ERROR::NURBS::getHomoControlPoints" << std::endl;
+	if((int)(i == -1) + (int)(j == -1) != 1) {
+		std::cout << "ERROR::NURBS::getHomoControlPoints: Either i is -1 or j is -1!" << std::endl;
 		exit(-1);
 	}
 	
 	if(i == -1) {
 		if(j < 0 || j > v_n) {
-			std::cout << "ERROR::NURBS::getHomoControlPoints" << std::endl;
+			std::cout << "ERROR::NURBS::getHomoControlPoints: j is out of bound!" << std::endl;
 			exit(-1);
 		}
 		std::vector<Vec4f> result(u_n + 1);
 		for(int _i = 0; _i <= u_n; _i++)
-			result[i] = toHomogeneous(controlPoints[_i][j], weight[_i][j]);
+			result[_i] = toHomogeneous(controlPoints[_i][j], weight[_i][j]);
 		return result;
 	}
 	
 	if(j == -1) {
-		if(i < 0 || i < u_n) {
-			std::cout << "ERROR::NURBS::getHomoControlPoints" << std::endl;
+		if(i < 0 || i > u_n) {
+			std::cout << "ERROR::NURBS::getHomoControlPoints: i is out of bound!" << std::endl;
 			exit(-1);
 		}
 		std::vector<Vec4f> result(v_n + 1);
@@ -634,7 +655,7 @@ std::vector<Vec4f> NURBS::getHomoControlPoints(int i, int j) const {
 		return result;
 	}
 
-	std::cout << "ERROR::NURBS::getHomoControlPoints" << std::endl;
+	std::cout << "ERROR::NURBS::getHomoControlPoints: can not reach here!" << std::endl;
 	exit(-1);
 }
 
@@ -797,16 +818,86 @@ Bounds3 getCurveBounds(const std::vector<float> &knot,
 
 IntervalObject::IntervalObject(std::shared_ptr<NURBS> &_surface, int _i, int _j) 
 	: surface(_surface), i(_i), j(_j) {
+	std::cout << "Initialize interval object" << std::endl;
 	updateBounds();
+}
+
+void refineToBezier(std::vector<float> &knot, 
+										std::vector<Vec4f> &controlPoints, 
+										int &p, int &m, int &n, int k, int globalBase) {
+	int c = k;
+	int base = c - p;
+	int s = 1;
+	int h = p - s;
+	float u = knot[k - globalBase];
+	std::vector<Vec4f> refinedControlPoints(controlPoints.begin() + c - p - globalBase, 
+																					controlPoints.begin() + c - s + 1 - globalBase);
+	std::vector<Vec4f> q = refinedControlPoints;
+	refinedControlPoints[p - 1] = controlPoints[k - globalBase];
+	for(int r = 1; r <= h; r++) {
+		refinedControlPoints[p - 2 - (r - 1)] = q[c - s - base];
+		for(int i = c - s; i >= c - p + r; i--) {
+			float alpha = (u - knot[i - globalBase]) / (knot[i + p - r + 1 - globalBase] - knot[i - globalBase]);
+			int index = i - base;
+			q[index] = alpha * q[index] + (1 - alpha) * q[index - 1];
+		}
+		controlPoints[c - p + r - globalBase] = q[c - p + r - base];
+	}
+	
+	c = k + p;
+	base = c - p;
+	s = 1;
+	h = p - s;
+	u = knot[k + 1 - globalBase];
+	q = refinedControlPoints;
+
+	// result = Union(result, fromHomogeneous(q[0]));
+	refinedControlPoints[0] = q[0];
+	for(int r = 1; r <= h; r++) {
+		for(int i = c - s; i >= c - p + r; i--) {
+			// knot[i]
+			float knot_I = (i > k + p - 1) ? knot[k + i - (k + p - 1) - globalBase] : knot[k - globalBase];
+			// knot[i + p - r + 1]
+			float knot_J = (i + p - r + 1 > k + p - 1) ? knot[k + (i + p - r + 1) - (k + p - 1) - globalBase] : knot[k - globalBase];
+			float alpha = (u - knot_I) / (knot_J - knot_I);
+			int index = i - base;
+			q[index] = alpha * q[index] + (1 - alpha) * q[index - 1];
+		}
+		refinedControlPoints[c - p + r - base] = q[c - p + r - base];
+	}
+	
+	controlPoints.resize(2 * p);
+	for(int i = k; i <= k + p - 1; i++) {
+		controlPoints[i - globalBase] = refinedControlPoints[i - k];
+	}
 }
 
 void IntervalObject::updateBounds() {
 	bound = Bounds3();
-	
-	bound = Union(bound, getCurveBounds(surface->knotN, surface->getHomoControlPoints(i, -1), surface->v_p, surface->v_m, surface->v_n, j));
-	bound = Union(bound, getCurveBounds(surface->knotN, surface->getHomoControlPoints(i + 1, -1), surface->v_p, surface->v_m, surface->v_n, j));
-	bound = Union(bound, getCurveBounds(surface->knotM, surface->getHomoControlPoints(-1, j), surface->u_p, surface->u_m, surface->u_n, i));
-	bound = Union(bound, getCurveBounds(surface->knotM, surface->getHomoControlPoints(-1, j + 1), surface->u_p, surface->u_m, surface->u_n, i));
+
+	int uBase = i - surface->u_p, vBase = j - surface->v_p;
+
+	std::vector<std::vector<Vec4f>> homoControlPoints(surface->u_p + 1, std::vector<Vec4f>(surface->v_p + 1));
+
+	for(int index_i = i - surface->u_p; index_i <= i; index_i++) {
+		for(int index_j = j - surface->v_p; index_j <= j; index_j++) {
+			homoControlPoints[index_i - uBase][index_j - vBase] 
+				= toHomogeneous(surface->controlPoints[index_i][index_j], surface->weight[index_i][index_j]);
+		}
+		std::vector<float> tmpKnotN(surface->knotN.begin() + j - surface->v_p, surface->knotN.begin() + j + surface->v_p + 1);
+		refineToBezier(tmpKnotN, homoControlPoints[index_i - uBase], surface->v_p, surface->v_m, surface->v_n, j, vBase);
+	}
+
+	for(int index_j = j - 1; index_j <= j + surface->v_p - 1; index_j++) {
+		std::vector<float> tmpKnotM(surface->knotM.begin() + i - surface->u_p, surface->knotM.begin() + i + surface->u_p + 1);
+		std::vector<Vec4f> finalHomoControlPoints(surface->u_p + 1);
+		for(int index_i = i - surface->u_p; index_i <= i; index_i++)
+			finalHomoControlPoints[index_i - uBase] = homoControlPoints[index_i - uBase][index_j - vBase];
+		refineToBezier(tmpKnotM, finalHomoControlPoints, surface->u_p, surface->u_m, surface->u_n, i, uBase);
+		for(int index_i = i - 1; index_i <= i + surface->u_p - 1; index_i++) {
+			bound = Union(bound, fromHomogeneous(finalHomoControlPoints[index_i - uBase]));
+		}
+	}
 }
 
 Bounds3 IntervalObject::getBounds() const { return bound; }
@@ -814,4 +905,32 @@ Bounds3 IntervalObject::getBounds() const { return bound; }
 bool IntervalObject::intersect(const Ray &ray, Interaction &interaction) const {
 	// TODO
 	return false;
+}
+
+// Test function
+void testSurfacePatchBound(std::shared_ptr<NURBS> &surface, int i, int j) {
+	std::cout << i << " " << j << std::endl;
+	printf("[%f, %f) x [%f, %f)\n", surface->knotM[i], surface->knotM[i + 1], surface->knotN[j], surface->knotN[j + 1]);
+	static const int TestBatch = 1000;
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	
+	std::uniform_real_distribution<double> dis_u(surface->knotM[i], surface->knotM[i + 1]);
+	std::uniform_real_distribution<double> dis_v(surface->knotN[j], surface->knotN[j + 1]);
+	IntervalObject surface_patch(surface, i, j);
+	auto bound = surface_patch.getBounds();
+	for(int i = 0; i < TestBatch; i++) {
+		// std::cout << "test " << i << std::endl;
+		double u = dis_u(gen);
+		double v = dis_v(gen);
+		Vertex p = surface->evaluateWithNormal(u, v);
+		if(!bound.Inside(p.position, bound)) {
+			std::cout << "ERROR::Test_Failed: error bound, surface point is not in bound!" << std::endl;
+			std::cout << u << " " << v << std::endl;
+			std::cout << p.position << std::endl;
+			std::cout << bound.pMin << std::endl;
+			std::cout << bound.pMax << std::endl;
+			exit(-1);
+		}
+	}
 }

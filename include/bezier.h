@@ -14,7 +14,7 @@ enum SamplingMode {
     Adaptive,
 };
 
-class NURBS {
+class NURBS : public std::enable_shared_from_this<NURBS> {
 public:
     std::vector<std::vector<Vec3f>> controlPoints;
     std::vector<std::vector<float>> weight;
@@ -32,7 +32,7 @@ public:
 		Vertex evaluateWithNormal(double u, double v);
 		Vertex evaluateWithNormalOld(float u, float v);
 		void refine();
-		std::vector<Vec4f> getHomoControlPoints(int i = -1, int j = -1) const;
+		std::vector<Vec4f> getHomoControlPoints(int i, int j) const;
     std::shared_ptr<TriangleMesh> generateMesh(SamplingMode mode = Uniform, int sampleMSize = 100, int sampleNSize = 100);
 };
 
@@ -55,4 +55,5 @@ void insertKnot(std::vector<float> &knot, std::vector<Vec4f> &controlPoints, int
 Bounds3 getCurveBounds(const std::vector<float> &knot, 
 											 const std::vector<Vec4f> &controlPoints, 
 											 const int &p, const int &m, const int &n, int k);
+void refineToBezier(std::vector<float> &knot, std::vector<Vec4f> &controlPoints, int &p, int &m, int &n, int k, int base);
 #endif //CS171_ASSIGNMENT4_BEZIER_H
