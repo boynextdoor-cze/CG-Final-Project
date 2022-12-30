@@ -541,7 +541,7 @@ Vertex NURBS::evaluateWithNormal(double u, double v) {
 }
 
 void NURBS::refine() {
-	static const int C = 3;
+	static const int C = 25;
 	std::vector<float> knotU_insert;
 	std::vector<float> knotV_insert;
 #ifdef MY_DEBUG
@@ -790,6 +790,7 @@ Bounds3 NURBS::getBounds() const { return bound; }
 
 bool NURBS::intersect(const Ray &ray, Interaction &interaction) const {
 	if(bvh != nullptr) {
+		// std::cout << "\rIntersect with NURBS" << std::endl;
 		return bvh->getIntersection(ray, interaction);
 	} else {
 		if(!bound.IntersectP(ray)) return false;
@@ -813,6 +814,7 @@ std::vector<std::vector<Vec3f>> readControlPoints(const std::string &path, int m
     for (int j = 0; j <= n; j++) {
       // inputFile >> result[i][j].x >> result[i][j].y >> result[i][j].z;
       inputFile >> result[i][j][0] >> result[i][j][1] >> result[i][j][2];
+			result[i][j] = 0.3f * result[i][j] + Vec3f(-0.5, 0.7f, 0);
     }
   }
   return std::move(result);
@@ -1012,6 +1014,8 @@ bool IntervalObject::intersect(const Ray &ray, Interaction &interaction) const {
 	static std::random_device rd;
 	static std::mt19937 gen(rd());
 	static std::uniform_real_distribution<double> dis(0.0f, 1.0f);
+	static const double EQ_EPS = 1e-10;
+	static const double EPS = 1e-6;
 	double u_0 = 0.5f * (surface->knotM[i] + surface->knotM[i + 1]);
 	double v_0 = 0.5f * (surface->knotN[j] + surface->knotN[j + 1]);
 
@@ -1026,7 +1030,7 @@ bool IntervalObject::intersect(const Ray &ray, Interaction &interaction) const {
 			
 			interaction.dist = t;
 			interaction.pos = ray(t);
-			interaction.normal = curIteration.p.normal;
+			interaction.normal = -curIteration.p.normal;
 			interaction.material = bsdf;
 			interaction.type = Interaction::Type::GEOMETRY;
 
@@ -1038,7 +1042,7 @@ bool IntervalObject::intersect(const Ray &ray, Interaction &interaction) const {
 		double J_21 = ray.n_2.dot(curIteration.p.derivative_u);
 		double J_22 = ray.n_2.dot(curIteration.p.derivative_v);
 		double det = J_11 * J_22 - J_12 * J_21;
-		if(std::fabs(det) < EPS) {
+		if(std::fabs(det) < EQ_EPS) {
 			double next_u = curIteration.u + 0.1 * (u_0 - curIteration.u) * dis(gen);
 			double next_v = curIteration.v + 0.1 * (v_0 - curIteration.v) * dis(gen);
 			curIteration = NewtonIteration(next_u, next_u, surface, ray);
@@ -1047,8 +1051,8 @@ bool IntervalObject::intersect(const Ray &ray, Interaction &interaction) const {
 			double next_u = curIteration.u - (invJ_11 * curIteration.F_1 + invJ_12 * curIteration.F_2) / det;
 			double next_v = curIteration.v - (invJ_21 * curIteration.F_1 + invJ_22 * curIteration.F_2) / det;
 			
-			if(next_u < surface->knotM[i] - EPS || next_u > surface->knotM[i + 1] + EPS || 
-				 next_v < surface->knotN[j] - EPS || next_v > surface->knotN[j + 1] + EPS)
+			if(next_u < surface->knotM[i] + EQ_EPS || next_u > surface->knotM[i + 1] - EQ_EPS || 
+				 next_v < surface->knotN[j] + EQ_EPS || next_v > surface->knotN[j + 1] - EQ_EPS)
 				return false;
 			
 			NewtonIteration nextIteration = NewtonIteration(next_u, next_v, surface, ray);

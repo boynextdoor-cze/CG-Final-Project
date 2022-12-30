@@ -1,4 +1,5 @@
 #include "accel.h"
+#include "utils.h"
 #include <iostream>
 #include <stdlib.h>
 #include <ctime>
@@ -58,7 +59,7 @@ BVHAccel::BVHAccel(std::vector<ObjectPtr> &p, int maxPrimsInNode,
   // Cache aligned, assume cache line is 64 bytes
 //  nodes =
 //      (LinearBVHNode *)aligned_alloc(64, total_nodes * sizeof(LinearBVHNode));
-   nodes = (LinearBVHNode *)malloc(total_nodes * sizeof(LinearBVHNode));
+  nodes = (LinearBVHNode *)malloc(total_nodes * sizeof(LinearBVHNode));
   // nodes = std::vector<LinearBVHNode>(total_nodes);
   int offset = 0;
   flattenBVHTree(root, offset);
