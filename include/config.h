@@ -38,6 +38,13 @@ struct Config {
     bool has_bvh;
   };
 
+	struct NURBSConfig {
+		std::string nurbs_json_path;
+		std::string material_name;
+		float translate[3];
+		float scale;
+	};
+
   //   RenderConfig render_config;
   int spp;
   int max_depth;
@@ -46,6 +53,52 @@ struct Config {
   LightConfig light_config;
   std::vector<MaterialConfig> materials;
   std::vector<ObjConfig> objects;
+	std::vector<NURBSConfig> nurbs;
+};
+
+enum class NURBSShapeType { SURFACE };
+enum class TrimType { SPLINE, CONTAINER };
+
+struct NURBSConfig {
+	struct ControlPoint {
+		std::vector<std::vector<float>> points;
+		std::vector<float> weights;
+	};
+	struct TrimCurveData {
+		ControlPoint control_points;
+		int degree;
+		int dimension;
+		std::vector<float> knotvector;
+		bool rational;
+		bool reversed;
+		TrimType type;
+	};
+	struct InnerTrimData {
+		int count;
+		std::vector<TrimCurveData> data;
+		bool reversed;
+		TrimType type;
+	};
+	struct TrimData {
+		int count;
+		std::vector<InnerTrimData> data;
+	};
+	struct NURBSData {
+		ControlPoint control_points;
+		int degree_u;
+		int degree_v;
+		int dimension;
+		std::vector<float> knotvector_u;
+		std::vector<float> knotvector_v;
+		bool rational;
+		bool reversed;
+		int size_u;
+		int size_v;
+		TrimData trims;
+	};
+	int count;
+	std::vector<NURBSData> data;
+	NURBSShapeType type;
 };
 
 #endif // CONFIG_H
