@@ -34,6 +34,7 @@ class Sampler;
 class Bounds3;
 class BVHNode;
 class BVHAccel;
+class KDTreeAccel;
 class Object;
 class Vertex;
 class NURBS;
@@ -44,5 +45,6 @@ struct LinearBVHNode;
 using ObjectPtr = std::shared_ptr<Object>;
 using BVHNodePtr = std::shared_ptr<BVHNode>;
 using BVHAccelPtr = std::shared_ptr<BVHAccel>;
+using KDTreeAccelPtr = std::shared_ptr<KDTreeAccel>;
 
 #endif //CORE_H_

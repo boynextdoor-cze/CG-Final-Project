@@ -21,6 +21,7 @@ public:
   bool Inside(const Vec3f &p, const Bounds3 &b) const;
   const Vec3f &operator[](int i) const;
   bool IntersectP(const Ray &ray) const;
+	bool IntersectP(const Ray &ray, float &tMin, float &tMax) const;
   std::pair<bool, float> IntersectWithTime(const Ray &ray) const;
 };
 

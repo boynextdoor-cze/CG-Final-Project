@@ -9,6 +9,7 @@
 #include "bounds3.h"
 #include "core.h"
 #include "geometry.h"
+#include "kdtree_accel.h"
 
 enum SamplingMode {
   Uniform,
@@ -38,6 +39,7 @@ class NURBS : public std::enable_shared_from_this<NURBS>, public Object {
   Bounds3 bound;
   std::shared_ptr<BSDF> bsdf;
   BVHAccelPtr bvh;
+	KDTreeAccelPtr kdtree;
   std::vector<std::shared_ptr<IntervalObject>> interval_objects;
 
   void setControlPoint(int i, int j, Vec3f point);
@@ -49,6 +51,7 @@ class NURBS : public std::enable_shared_from_this<NURBS>, public Object {
   void setMaterial(std::shared_ptr<BSDF> &new_bsdf);
   void refineAndInitIntervalObject();
   void buildBVH();
+	void buildKDTree();
   void init();
 
   std::pair<float, float> evaluateN(std::vector<float> &knot, float t, int i,

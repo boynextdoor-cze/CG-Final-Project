@@ -176,9 +176,16 @@ void NURBS::buildBVH() {
   bvh = std::make_shared<BVHAccel>(objects, 5);
 }
 
+void NURBS::buildKDTree() {
+  std::vector<ObjectPtr> objects(interval_objects.size());
+  for (int i = 0; i < objects.size(); i++) objects[i] = interval_objects[i];
+	kdtree = std::make_shared<KDTreeAccel>(objects);
+}
+
 void NURBS::init() {
   refineAndInitIntervalObject();
-  buildBVH();
+  // buildBVH();
+	buildKDTree();
 }
 
 std::pair<float, float> NURBS::evaluateN(std::vector<float> &knot, float t,
