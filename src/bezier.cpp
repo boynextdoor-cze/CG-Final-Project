@@ -866,7 +866,10 @@ bool NURBS::intersect(const Ray &ray, Interaction &interaction) const {
   if (bvh != nullptr) {
     // std::cout << "\rIntersect with NURBS" << std::endl;
     return bvh->getIntersection(ray, interaction);
-  } else {
+  } 
+	if (kdtree != nullptr) {
+		return kdtree->getIntersection(ray, interaction);
+	} else {
     if (!bound.IntersectP(ray)) return false;
     bool result = false;
     for (auto &interval_object : interval_objects) {

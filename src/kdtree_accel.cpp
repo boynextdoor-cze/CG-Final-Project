@@ -1,5 +1,8 @@
 #include "kdtree_accel.h"
+
 #include <ctime>
+
+#include "utils.h"
 
 KDTreeAccel::KDTreeAccel(std::vector<ObjectPtr> &_objects, int _intersectCost,
                          int _traversalCost, float _emptyBonus, int _maxObjects,
@@ -26,7 +29,7 @@ KDTreeAccel::KDTreeAccel(std::vector<ObjectPtr> &_objects, int _intersectCost,
   for (int i = 0; i < objectIndex.size(); i++) objectIndex[i] = i;
   time_t start, stop;
   time(&start);
-	printf("KDTree building starts\n");
+  printf("KDTree building starts\n");
   recursiveBuild(bound, objectBounds, objectIndex.data(), objects.size(),
                  maxDepth, edges, tmpObjects0.data(), tmpObjects1.data(), 0);
   time(&stop);
@@ -35,11 +38,12 @@ KDTreeAccel::KDTreeAccel(std::vector<ObjectPtr> &_objects, int _intersectCost,
   int mins = ((int)diff / 60) - (hrs * 60);
   int secs = (int)diff - (hrs * 3600) - (mins * 60);
   printf(
-      "\rKDTree Generation complete: \nTime Taken: %i hrs, %i mins, %i secs\n\n",
+      "\rKDTree Generation complete: \nTime Taken: %i hrs, %i mins, %i "
+      "secs\n\n",
       hrs, mins, secs);
 }
 
-void KDTreeAccel::recursiveBuild(const Bounds3 &bound,
+void KDTreeAccel::recursiveBuild(const Bounds3 &curBound,
                                  const std::vector<Bounds3> &objectBound,
                                  int *curObjectIndices, int curTotalObjects,
                                  int depth,
@@ -47,30 +51,29 @@ void KDTreeAccel::recursiveBuild(const Bounds3 &bound,
                                  int *tmpObjects0, int *tmpObjects1,
                                  int badRefines) {
   if (curTotalObjects <= maxObjects || depth == 0) {
-    nodes.emplace_back();
-    nodes.back().InitLeaf(curObjectIndices, curTotalObjects, objectIndices);
+    nodes.emplace_back().InitLeaf(curObjectIndices, curTotalObjects, objectIndices);
     return;
   }
   int bestAxis = -1, bestOffset = -1;
   float bestCost = 1e9;
   float oldCost = intersectCost * (float)curTotalObjects;
-  float totalSA = bound.SurfaceArea();
+  float totalSA = curBound.SurfaceArea();
   float invTotalSA = 1.0f / totalSA;
-  Vec3f d = bound.Diagonal();
-  int axis = bound.maxExtent();
+  Vec3f d = curBound.Diagonal();
+  int axis = curBound.maxExtent();
   int retries = 0;
 
 retrySplit:
   for (int i = 0; i < curTotalObjects; i++) {
     int index = curObjectIndices[i];
-    const Bounds3 &curBound = objectBound[index];
-    edges[axis][2 * i] = BoundEdge(curBound.pMin[axis], index, true);
-    edges[axis][2 * i + 1] = BoundEdge(curBound.pMax[axis], index, false);
+    const Bounds3 &curObjectBound = objectBound[index];
+    edges[axis][2 * i] = BoundEdge(curObjectBound.pMin[axis], index, true);
+    edges[axis][2 * i + 1] = BoundEdge(curObjectBound.pMax[axis], index, false);
   }
 
   std::sort(&edges[axis][0], &edges[axis][2 * curTotalObjects],
             [](const BoundEdge &edge_0, const BoundEdge &edge_1) -> bool {
-              if (edge_0.t != edge_0.t)
+              if (edge_0.t != edge_1.t)
                 return edge_0.t < edge_1.t;
               else
                 return (int)edge_0.type < (int)edge_1.type;
@@ -81,13 +84,13 @@ retrySplit:
     if (edges[axis][i].type == EdgeType::End) totalAbove--;
     float curEdgeT = edges[axis][i].t;
 
-    if (curEdgeT > bound.pMin[axis] && curEdgeT < bound.pMax[axis]) {
+    if (curEdgeT > curBound.pMin[axis] && curEdgeT < curBound.pMax[axis]) {
       int otherAxis_0 = (axis + 1) % 3, otherAxis_1 = (axis + 2) % 3;
       float belowSA = d[otherAxis_0] * d[otherAxis_1] +
-                      2.0f * (curEdgeT - bound.pMin[axis]) *
+                      2.0f * (curEdgeT - curBound.pMin[axis]) *
                           (d[otherAxis_0] + d[otherAxis_1]);
       float aboveSA = d[otherAxis_0] * d[otherAxis_1] +
-                      2.0f * (bound.pMax[axis] - curEdgeT) *
+                      2.0f * (curBound.pMax[axis] - curEdgeT) *
                           (d[otherAxis_0] + d[otherAxis_1]);
       float pBelow = belowSA * invTotalSA;
       float pAbove = aboveSA * invTotalSA;
@@ -102,8 +105,13 @@ retrySplit:
         bestAxis = axis;
         bestOffset = i;
       }
-      if (edges[axis][i].type == EdgeType::Start) totalBelow++;
     }
+    if (edges[axis][i].type == EdgeType::Start) totalBelow++;
+  }
+
+  if (totalBelow != curTotalObjects || totalAbove != 0) {
+    std::cout << "ERROR: split error" << std::endl;
+    exit(-1);
   }
 
   if (bestAxis == -1 && retries < 2) {
@@ -115,8 +123,7 @@ retrySplit:
   if (bestCost > oldCost) ++badRefines;
   if ((bestCost > 4 * oldCost && curTotalObjects < 16) || bestAxis == -1 ||
       badRefines == 3) {
-    nodes.emplace_back();
-    nodes.back().InitLeaf(curObjectIndices, curTotalObjects, objectIndices);
+		nodes.emplace_back().InitLeaf(curObjectIndices, curTotalObjects, objectIndices);
     return;
   }
 
@@ -129,29 +136,31 @@ retrySplit:
       tmpObjects1[n1++] = edges[bestAxis][i].objectIndex;
 
   float tSplit = edges[bestAxis][bestOffset].t;
-  Bounds3 bound0 = bound, bound1 = bound;
+  Bounds3 bound0 = curBound, bound1 = curBound;
   bound0.pMax[bestAxis] = bound1.pMin[bestAxis] = tSplit;
   nodes.emplace_back();
-  auto &curNode = nodes.back();
+	int curIndex = nodes.size();
   recursiveBuild(bound0, objectBound, tmpObjects0, n0, depth - 1, edges,
-                 curObjectIndices, tmpObjects1 + n1, badRefines);
-  curNode.InitInterior(bestAxis, nodes.size(), tSplit);
+                 tmpObjects0, tmpObjects1 + curTotalObjects, badRefines);
+  nodes[curIndex].InitInterior(bestAxis, nodes.size(), tSplit);
   recursiveBuild(bound1, objectBound, tmpObjects1, n1, depth - 1, edges,
-                 curObjectIndices, tmpObjects1 + n1, badRefines);
+                 tmpObjects0, tmpObjects1 + curTotalObjects, badRefines);
 }
 
 bool KDTreeAccel::getIntersection(const Ray &ray,
                                   Interaction &interaction) const {
   float tMin, tMax;
   if (!bound.IntersectP(ray, tMin, tMax)) return false;
-
+  printf("KDtree intersection\n");
+  DEBUG_VEC(ray.origin);
+  DEBUG_VEC(ray.direction);
   KDToDo todo[64];
   int todoPos = 0;
   bool hit = false;
   const KDAccelNode *node = &nodes.data()[0];
   while (node != nullptr) {
     if (ray.t_max < tMin) break;
-
+    // printf("%d\n", todoPos);
     if (!node->IsLeaf()) {
       int axis = node->SplitAxis();
       float tPlane =

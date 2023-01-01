@@ -65,13 +65,13 @@ class KDTreeAccel {
   KDTreeAccel() = default;
   ~KDTreeAccel() = default;
   KDTreeAccel(std::vector<ObjectPtr> &p, int intersectCost = 80,
-              int traversalCost = 1, float emptyBonus = 0.5, int maxObjects = 1,
+              int traversalCost = 1, float emptyBonus = 0.5, int maxObjects = 2,
               int maxDepth = -1);
   Bounds3 getBounds() const { return bound; };
   bool getIntersection(const Ray &ray, Interaction &interaction) const;
 
  private:
-  void recursiveBuild(const Bounds3 &bound,
+  void recursiveBuild(const Bounds3 &curBound,
                       const std::vector<Bounds3> &objectBound,
                       int *curObjectIndices, int curTotalObjects, int depth,
                       std::vector<std::vector<BoundEdge>> &edges,
