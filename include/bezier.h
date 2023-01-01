@@ -39,7 +39,7 @@ class NURBS : public std::enable_shared_from_this<NURBS>, public Object {
   Bounds3 bound;
   std::shared_ptr<BSDF> bsdf;
   BVHAccelPtr bvh;
-	KDTreeAccelPtr kdtree;
+  KDTreeAccelPtr kdtree;
   std::vector<std::shared_ptr<IntervalObject>> interval_objects;
 
   void setControlPoint(int i, int j, Vec3f point);
@@ -51,7 +51,7 @@ class NURBS : public std::enable_shared_from_this<NURBS>, public Object {
   void setMaterial(std::shared_ptr<BSDF> &new_bsdf);
   void refineAndInitIntervalObject();
   void buildBVH();
-	void buildKDTree();
+  void buildKDTree();
   void init();
 
   std::pair<float, float> evaluateN(std::vector<float> &knot, float t, int i,
@@ -83,8 +83,8 @@ class IntervalObject : public Object {
   bool intersect(const Ray &ray, Interaction &interaction) const override;
 };
 
-std::vector<std::vector<Vec3f>> readControlPoints(const std::string &path,
-                                                  int m, int n);
+std::vector<std::vector<Vec3f>> readControlPoints(
+    const std::string &path, int m, int n, Vec3f t = Vec3f(0.f, 0.f, 0.f));
 std::vector<std::vector<float>> readWeights(const std::string &path, int m,
                                             int n);
 void insertKnot(std::vector<float> &knot, std::vector<Vec4f> &controlPoints,

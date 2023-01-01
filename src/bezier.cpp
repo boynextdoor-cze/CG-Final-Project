@@ -880,7 +880,7 @@ bool NURBS::intersect(const Ray &ray, Interaction &interaction) const {
 }
 
 std::vector<std::vector<Vec3f>> readControlPoints(const std::string &path,
-                                                  int m, int n) {
+                                                  int m, int n, Vec3f translate) {
   std::vector<std::vector<Vec3f>> result(
       m + 1, std::vector<Vec3f>(n + 1, Vec3f(0.0f, 0.0f, 0.0f)));
   //  std::ifstream inputFile(getPath(path));
@@ -893,7 +893,7 @@ std::vector<std::vector<Vec3f>> readControlPoints(const std::string &path,
     for (int j = 0; j <= n; j++) {
       // inputFile >> result[i][j].x >> result[i][j].y >> result[i][j].z;
       inputFile >> result[i][j][0] >> result[i][j][1] >> result[i][j][2];
-      result[i][j] = 0.3f * result[i][j] + Vec3f(-0.5, 0.7f, 0);
+      result[i][j] = 0.1f * result[i][j] + translate;
     }
   }
   return std::move(result);
