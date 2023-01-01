@@ -157,6 +157,8 @@ void initSceneFromConfig(const Config &config, std::shared_ptr<Scene> &scene) {
           nurbsData.degree_v + 1, controlPoints, nurbsData.knotvector_u,
           nurbsData.knotvector_v, mat_list[nurbs.material_name]);
 
+			nurbsInstance->init();
+			
       scene->addObject(nurbsInstance);
     }
   }
