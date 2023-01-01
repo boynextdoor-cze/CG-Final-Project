@@ -54,6 +54,7 @@ void KDTreeAccel::recursiveBuild(const Bounds3 &curBound,
   if (curTotalObjects <= maxObjects || depth == 0) {
     nodes.emplace_back().InitLeaf(curObjectIndices, curTotalObjects,
                                   objectIndices);
+    // nodes.back().bound = curBound;
     return;
   }
   int bestAxis = -1, bestOffset = -1;
@@ -129,6 +130,7 @@ void KDTreeAccel::recursiveBuild(const Bounds3 &curBound,
       badRefines == 3) {
     nodes.emplace_back().InitLeaf(curObjectIndices, curTotalObjects,
                                   objectIndices);
+    // nodes.back().bound = curBound;
     return;
   }
 
@@ -154,13 +156,16 @@ void KDTreeAccel::recursiveBuild(const Bounds3 &curBound,
   recursiveBuild(bound0, objectBound, tmpObjects0, n0, depth - 1, edges,
                  tmpObjects0, tmpObjects1 + curTotalObjects, badRefines);
   nodes[curIndex].InitInterior(bestAxis, nodes.size(), tSplit);
+  
+	// nodes[curIndex].bound = curBound;
+
   recursiveBuild(bound1, objectBound, tmpObjects1, n1, depth - 1, edges,
                  tmpObjects0, tmpObjects1 + curTotalObjects, badRefines);
 }
 
 bool KDTreeAccel::getIntersection(const Ray &ray,
                                   Interaction &interaction) const {
-  float tMin, tMax;
+  float tMin, tMax, distMin;
   if (!bound.IntersectP(ray, tMin, tMax)) return false;
   if (tMin > interaction.dist) return false;
   KDToDo todo[64];
@@ -185,6 +190,48 @@ bool KDTreeAccel::getIntersection(const Ray &ray,
       float tPlane =
           (node->SplitPos() - ray.origin[axis]) * ray.inv_direction[axis];
 
+      // const KDAccelNode *firstChild = node + 1,
+      //                   *secondChild = &nodes[node->AboveChild()];
+      // float tMin_l, tMax_l, tMin_r, tMax_r;
+      // bool flag_l = firstChild->bound.IntersectP(ray, tMin_l, tMax_l);
+      // bool flag_r = secondChild->bound.IntersectP(ray, tMin_r, tMax_r);
+
+      // if (flag_l && flag_r) {
+      // 	if (tMin_l < tMin_r) {
+      // 		todo[todoPos].node = secondChild;
+      // 		todo[todoPos].tMin = tMin_r;
+      // 		todo[todoPos].tMax = tMax_r;
+      // 		++todoPos;
+      // 		node = firstChild;
+      // 		tMin = tMin_l;
+      // 		tMax = tMax_l;
+      // 	} else {
+      // 		todo[todoPos].node = firstChild;
+      // 		todo[todoPos].tMin = tMin_l;
+      // 		todo[todoPos].tMax = tMax_l;
+      // 		++todoPos;
+      // 		node = secondChild;
+      // 		tMin = tMin_r;
+      // 		tMax = tMax_r;
+      // 	}
+      // } else if(flag_l) {
+      // 	node = firstChild;
+      // 	tMin = tMin_l;
+      // 	tMax = tMax_l;
+      // } else if(flag_r) {
+      // 	node = secondChild;
+      // 	tMin = tMin_r;
+      // 	tMax = tMax_r;
+      // } else {
+      // 	if (todoPos > 0) {
+      // 		--todoPos;
+      // 		node = todo[todoPos].node;
+      // 		tMin = todo[todoPos].tMin;
+      // 		tMax = todo[todoPos].tMax;
+      // 		continue;
+      // 	} else
+      // 		break;
+      // }
       const KDAccelNode *firstChild = nullptr, *secondChild = nullptr;
       bool belowFirst =
           (ray.origin[axis] < node->SplitPos()) ||

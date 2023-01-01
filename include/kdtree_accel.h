@@ -34,7 +34,7 @@ struct KDAccelNode {
   int SplitAxis() const { return flags & 3; }
   bool IsLeaf() const { return (flags & 3) == 3; }
   int AboveChild() const { return aboveChild >> 2; }
-
+  // Bounds3 bound;
   union {
     float split;              // Interior
     int objectIndex;          // Leaf
