@@ -1,5 +1,5 @@
 {
-  "spp": 12,
+  "spp": 256,
   "max_depth": 12,
   "image_resolution" : [600, 600],
   "cam_config" : {
@@ -67,5 +67,13 @@
       "scale" : 1,
       "has_bvh" : true
     }
-  ]
+  ],
+	"nurbs" : [
+		{
+			"nurbs_json_path" : "../assets/duck.json",
+			"material_name" : "grey_diffuse",
+      "translate": [-0.2, 1.0, 0],
+      "scale" : 0.1
+		}
+	]
 }
