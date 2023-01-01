@@ -184,8 +184,8 @@ void NURBS::buildKDTree() {
 
 void NURBS::init() {
   refineAndInitIntervalObject();
-  // buildBVH();
-	buildKDTree();
+  buildBVH();
+	// buildKDTree();
 }
 
 std::pair<float, float> NURBS::evaluateN(std::vector<float> &knot, float t,
