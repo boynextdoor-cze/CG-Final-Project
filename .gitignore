@@ -30,6 +30,18 @@
 *.out
 *.app
 
+# LaTeX temporary files
+*.aux
+*.toc
+*.log
+*.blg
+*.bbl
+*.dvi
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.synctex(busy)
+
 .idea
 cmake-*
 .vscode
