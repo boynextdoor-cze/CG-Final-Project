@@ -7,7 +7,7 @@
 
 #define UNIMPLEMENTED
 
-template <typename T, int size>
+template<typename T, int size>
 using Vec = Eigen::Matrix<T, size, 1>;
 
 using Vec3f = Eigen::Vector3f;
@@ -47,4 +47,4 @@ using BVHNodePtr = std::shared_ptr<BVHNode>;
 using BVHAccelPtr = std::shared_ptr<BVHAccel>;
 using KDTreeAccelPtr = std::shared_ptr<KDTreeAccel>;
 
-#endif //CORE_H_
+#endif// CORE_H_

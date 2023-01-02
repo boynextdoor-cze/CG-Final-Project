@@ -33,35 +33,35 @@
   ],
   "objects" : [
     {
-      "obj_file_path" : "../assets/left.obj",
+      "obj_file_path" : "assets/boxes/left.obj",
       "material_name" : "red_diffuse",
       "translate": [0,0,0],
       "scale" : 1,
       "has_bvh" : true
     },
     {
-      "obj_file_path" : "../assets/right.obj",
+      "obj_file_path" : "assets/boxes/right.obj",
       "material_name" : "green_diffuse",
       "translate": [0,0,0],
       "scale" : 1,
       "has_bvh" : true
     },
     {
-      "obj_file_path" : "../assets/floor.obj",
+      "obj_file_path" : "assets/boxes/floor.obj",
       "material_name" : "grey_diffuse",
       "translate": [0,0,0],
       "scale" : 1,
       "has_bvh" : true
     },
     {
-      "obj_file_path" : "../assets/ceiling.obj",
+      "obj_file_path" : "assets/boxes/ceiling.obj",
       "material_name" : "grey_diffuse",
       "translate": [0,0,0],
       "scale" : 1,
       "has_bvh" : true
     },
     {
-      "obj_file_path" : "../assets/back.obj",
+      "obj_file_path" : "assets/boxes/back.obj",
       "material_name" : "grey_diffuse",
       "translate": [0,0,0],
       "scale" : 1,
@@ -69,11 +69,11 @@
     }
   ],
 	"nurbs" : [
-		{
-			"nurbs_json_path" : "../assets/duck.json",
-			"material_name" : "grey_diffuse",
-      "translate": [-0.2, 1.0, 0],
-      "scale" : 0.1
-		}
+      {
+        "nurbs_json_path" : "assets/duck.json",
+        "material_name" : "grey_diffuse",
+        "translate": [-0.2, 1.0, 0],
+        "scale" : 0.1
+      }
 	]
 }

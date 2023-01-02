@@ -3,40 +3,41 @@
 
 #include "core.h"
 
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
 
-enum class MaterialType { DIFFUSE, SPECULAR };
+enum class MaterialType { DIFFUSE,
+	                      SPECULAR };
 
 struct Config {
-  struct LightConfig {
-    float position[3];
-    float size[2];
-    float radiance[3];
-  };
+	struct LightConfig {
+		float position[3];
+		float size[2];
+		float radiance[3];
+	};
 
-  struct CamConfig {
-    float position[3];
-    float look_at[3];
-    float ref_up[3];
-    float vertical_fov;
-    float focal_length;
-  };
+	struct CamConfig {
+		float position[3];
+		float look_at[3];
+		float ref_up[3];
+		float vertical_fov;
+		float focal_length;
+	};
 
-  struct MaterialConfig {
-    float color[3];
-    MaterialType type;
-    std::string name;
-  };
+	struct MaterialConfig {
+		float color[3];
+		MaterialType type;
+		std::string name;
+	};
 
-  struct ObjConfig {
-    std::string obj_file_path;
-    std::string material_name;
-    float translate[3];
-    float scale;
-    bool has_bvh;
-  };
+	struct ObjConfig {
+		std::string obj_file_path;
+		std::string material_name;
+		float translate[3];
+		float scale;
+		bool has_bvh;
+	};
 
 	struct NURBSConfig {
 		std::string nurbs_json_path;
@@ -45,19 +46,20 @@ struct Config {
 		float scale;
 	};
 
-  //   RenderConfig render_config;
-  int spp;
-  int max_depth;
-  int image_resolution[2];
-  CamConfig cam_config;
-  LightConfig light_config;
-  std::vector<MaterialConfig> materials;
-  std::vector<ObjConfig> objects;
+	//   RenderConfig render_config;
+	int spp;
+	int max_depth;
+	int image_resolution[2];
+	CamConfig cam_config;
+	LightConfig light_config;
+	std::vector<MaterialConfig> materials;
+	std::vector<ObjConfig> objects;
 	std::vector<NURBSConfig> nurbs;
 };
 
 enum class NURBSShapeType { SURFACE };
-enum class TrimType { SPLINE, CONTAINER };
+enum class TrimType { SPLINE,
+	                  CONTAINER };
 
 struct NURBSConfig {
 	struct ControlPoint {
@@ -101,4 +103,4 @@ struct NURBSConfig {
 	NURBSShapeType type;
 };
 
-#endif // CONFIG_H
+#endif// CONFIG_H

@@ -54,4 +54,4 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(NURBSConfig::NURBSData, control_points,
                                    size_v, trims);
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(NURBSConfig, count, data, type);
-#endif  // CONFIG_IO_H_
+#endif// CONFIG_IO_H_

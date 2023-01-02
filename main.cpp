@@ -14,8 +14,8 @@ int main(int argc, char *argv[]) {
   std::string file_name;
   if (argc == 1) {
     std::cout << "No json specified, use default path." << std::endl;
-    file_name = "../configs/simple.json";
-    fin.open("../configs/simple.json");
+    file_name = "configs/simple.json";
+    fin.open("configs/simple.json");
   } else {
     file_name = argv[1];
     fin.open(argv[1]);
@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
   std::cout << "\nRender Finished in " << time << "s." << std::endl;
-  rendered_img->writeImgToFile("../result.png");
+  rendered_img->writeImgToFile("result.png");
   std::cout << "Image saved to disk." << std::endl;
   return 0;
 }
