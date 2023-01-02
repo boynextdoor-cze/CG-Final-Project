@@ -23,6 +23,7 @@ void Camera::lookAt(const Vec3f &look_at, const Vec3f &ref_up) {
 	forward = (look_at - position).normalized();
 	right = forward.cross(ref_up).normalized();
 	up = right.cross(forward);
+	forward *= focal_len;
 	float half_fov = utils::radians(fov / 2);
 	float y_len = tanf(half_fov) * focal_len;
 	up *= y_len;
