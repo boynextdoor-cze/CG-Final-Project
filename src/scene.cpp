@@ -147,10 +147,10 @@ void initSceneFromConfig(const Config &config, std::shared_ptr<Scene> &scene) {
 					        Vec3f(nurbs.translate[0], nurbs.translate[1], nurbs.translate[2]);
 				}
 
-			if (nurbsData.trims.count > 0) {
-				std::cout << "Have not supported trims yet." << std::endl;
-				exit(-1);
-			}
+//			if (nurbsData.trims.count > 0) {
+//				std::cout << "Have not supported trims yet." << std::endl;
+//				exit(-1);
+//			}
 
 			std::shared_ptr<NURBS> nurbsInstance = std::make_shared<NURBS>(
 			        nurbsData.size_u - 1, nurbsData.size_v - 1, nurbsData.degree_u + 1,

@@ -712,7 +712,7 @@ void NURBS::refine() {
 #ifdef MY_DEBUG
 	std::cout << "knots in knotU_insert have been inserted" << std::endl;
 #endif
-	// Ressign k and l
+	// Reassign k and l
 	k = u_p + 1;
 	l = v_p + 1;
 

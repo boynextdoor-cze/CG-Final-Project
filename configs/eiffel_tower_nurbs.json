@@ -71,7 +71,7 @@
 	"nurbs" : [
 		{
           "nurbs_json_path" : "assets/EiffelTower/Eiffel_Tower.json",
-          "material_name" : "grey_diffuse",
+          "material_name" : "green_diffuse",
           "translate": [-0.5, 100, 1700],
           "scale" : 1
 		}
