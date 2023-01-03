@@ -873,6 +873,9 @@ bool NURBS::intersect(const Ray &ray, Interaction &interaction) const {
 		return result;
 	}
 }
+void NURBS::setTrimCurve(const std::vector<std::vector<std::shared_ptr<TrimCurve>>> &trimCurves) {
+	trim_curves = trimCurves;
+}
 
 std::vector<std::vector<Vec3f>> readControlPoints(const std::string &path,
                                                   int m, int n,

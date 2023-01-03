@@ -136,6 +136,8 @@ void initSceneFromConfig(const Config &config, std::shared_ptr<Scene> &scene) {
 			}
 			std::vector<std::vector<Vec3f>> controlPoints(
 			        nurbsData.size_u, std::vector<Vec3f>(nurbsData.size_v));
+			std::vector<std::vector<float>> weights(
+			        nurbsData.size_u, std::vector<float>(nurbsData.size_v));
 			for (int i = 0; i < nurbsData.size_u; i++)
 				for (int j = 0; j < nurbsData.size_v; j++) {
 					controlPoints[i][j] = {
@@ -145,17 +147,58 @@ void initSceneFromConfig(const Config &config, std::shared_ptr<Scene> &scene) {
 					controlPoints[i][j] =
 					        controlPoints[i][j] * nurbs.scale +
 					        Vec3f(nurbs.translate[0], nurbs.translate[1], nurbs.translate[2]);
+					weights[i][j] = nurbsData.control_points.weights[i * nurbsData.size_v + j];
 				}
 
-//			if (nurbsData.trims.count > 0) {
-//				std::cout << "Have not supported trims yet." << std::endl;
-//				exit(-1);
-//			}
+			//			if (nurbsData.trims.count > 0) {
+			//				std::cout << "Have not supported trims yet." << std::endl;
+			//				exit(-1);
+			//			}
 
 			std::shared_ptr<NURBS> nurbsInstance = std::make_shared<NURBS>(
 			        nurbsData.size_u - 1, nurbsData.size_v - 1, nurbsData.degree_u + 1,
-			        nurbsData.degree_v + 1, controlPoints, nurbsData.knotvector_u,
+			        nurbsData.degree_v + 1, controlPoints, weights, nurbsData.knotvector_u,
 			        nurbsData.knotvector_v, mat_list[nurbs.material_name]);
+
+			std::vector<std::vector<std::shared_ptr<TrimCurve>>> trimCurves;
+			trimCurves.resize(nurbsData.trims.count);
+
+			if (nurbsData.trims.count != nurbsData.trims.data.size()) {
+				std::cout << "NURBS json file has error, nurbsData.trims.count != "
+				             "nurbsData.trims.data.size() !!!"
+				          << std::endl;
+				exit(-1);
+			}
+
+			for (auto &trim: nurbsData.trims.data) {
+
+				if (trim.count != trim.data.size()) {
+					std::cout << "NURBS json file has error, trim.count != "
+					             "trim.data.size() !!!"
+					          << std::endl;
+					exit(-1);
+				}
+
+				std::vector<std::shared_ptr<TrimCurve>> trimCurve;
+				trimCurve.resize(trim.count);
+				for (int i = 0; i < trim.count; i++) {
+					std::vector<Vec2f> controlPoints2D;
+					std::vector<float> weights2D;
+					for (auto &point: trim.data[i].control_points.points) {
+						controlPoints2D.emplace_back(Vec2f(point[0], point[1]) * nurbs.scale +
+						                             Vec2f(nurbs.translate[0], nurbs.translate[1]));
+					}
+					for (auto &weight: trim.data[i].control_points.weights) {
+						weights2D.push_back(weight);
+					}
+					trimCurve[i] = std::make_shared<TrimCurve>(
+					        controlPoints2D, weights2D, trim.data[i].knotvector,
+					        controlPoints2D.size() - 1, trim.data[i].degree + 1);
+				}
+				trimCurves.push_back(trimCurve);
+			}
+
+			nurbsInstance->setTrimCurve(trimCurves);
 
 			nurbsInstance->init();
 

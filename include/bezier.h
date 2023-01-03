@@ -8,6 +8,7 @@
 
 #include "bounds3.h"
 #include "core.h"
+#include "curve.h"
 #include "geometry.h"
 #include "kdtree_accel.h"
 
@@ -41,6 +42,7 @@ public:
 	BVHAccelPtr bvh;
 	KDTreeAccelPtr kdtree;
 	std::vector<std::shared_ptr<IntervalObject>> interval_objects;
+	std::vector<std::vector<std::shared_ptr<TrimCurve>>> trim_curves;
 
 	void setControlPoint(int i, int j, Vec3f point);
 	void setControlPoint(const std::vector<std::vector<Vec3f>> &_controlPoints);
@@ -53,6 +55,7 @@ public:
 	void buildBVH();
 	void buildKDTree();
 	void init();
+	void setTrimCurve(const std::vector<std::vector<std::shared_ptr<TrimCurve>>> &trimCurves);
 
 	static std::pair<float, float> evaluateN(std::vector<float> &knot, float t,
 	                                         int i, int k);
