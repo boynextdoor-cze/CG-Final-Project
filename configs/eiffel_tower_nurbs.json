@@ -33,35 +33,35 @@
   ],
   "objects" : [
     {
-      "obj_file_path" : "assets/EiffelTower/large_left.obj",
+      "obj_file_path" : "assets/boxes/large_left.obj",
       "material_name" : "red_diffuse",
       "translate": [0,0,0],
       "scale" : 1,
       "has_bvh" : true
     },
     {
-      "obj_file_path" : "assets/EiffelTower/large_right.obj",
+      "obj_file_path" : "assets/boxes/large_right.obj",
       "material_name" : "green_diffuse",
       "translate": [0,0,0],
       "scale" : 1,
       "has_bvh" : true
     },
     {
-      "obj_file_path" : "assets/EiffelTower/large_floor.obj",
+      "obj_file_path" : "assets/boxes/large_floor.obj",
       "material_name" : "grey_diffuse",
       "translate": [0,0,0],
       "scale" : 1,
       "has_bvh" : true
     },
     {
-      "obj_file_path" : "assets/EiffelTower/large_ceiling.obj",
+      "obj_file_path" : "assets/boxes/large_ceiling.obj",
       "material_name" : "grey_diffuse",
       "translate": [0,0,0],
       "scale" : 1,
       "has_bvh" : true
     },
     {
-      "obj_file_path" : "assets/EiffelTower/large_back.obj",
+      "obj_file_path" : "assets/boxes/large_back.obj",
       "material_name" : "grey_diffuse",
       "translate": [0,0,0],
       "scale" : 1,
@@ -70,7 +70,7 @@
   ],
 	"nurbs" : [
 		{
-          "nurbs_json_path" : "assets/EiffelTower/Eiffel_Tower.json",
+          "nurbs_json_path" : "assets/largeModels/Eiffel_Tower.json",
           "material_name" : "green_diffuse",
           "translate": [-0.5, 100, 1700],
           "scale" : 1
