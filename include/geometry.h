@@ -2,8 +2,8 @@
 #ifndef GEOMETRY_H_
 #define GEOMETRY_H_
 
+#include "aabb.h"
 #include "accel.h"
-#include "bounds3.h"
 #include "bsdf.h"
 #include "core.h"
 #include "interaction.h"

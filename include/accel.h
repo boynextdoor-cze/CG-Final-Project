@@ -2,7 +2,7 @@
 #ifndef ACCEL_H_
 #define ACCEL_H_
 
-#include "bounds3.h"
+#include "aabb.h"
 #include "core.h"
 #include "geometry.h"
 #include "interaction.h"

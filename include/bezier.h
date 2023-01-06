@@ -6,15 +6,28 @@
 #define CS171_ASSIGNMENT4_BEZIER_H
 #include <vector>
 
-#include "bounds3.h"
+#include "aabb.h"
 #include "core.h"
-#include "curve.h"
 #include "geometry.h"
 #include "kdtree_accel.h"
 
 enum SamplingMode {
 	Uniform,
 	Adaptive,
+};
+
+class TrimCurve {
+public:
+	TrimCurve() = default;
+	~TrimCurve() = default;
+
+	TrimCurve(const std::vector<Vec2f> &_controlPoints, const std::vector<float> &_weight, const std::vector<float> &_knot, int _n, int _k);
+
+	std::vector<Vec2f> controlPoints;
+	std::vector<float> weights;
+	std::vector<float> knots;
+	int n{};
+	int order{};
 };
 
 class NURBS : public std::enable_shared_from_this<NURBS>, public Object {
@@ -98,4 +111,5 @@ Bounds3 getCurveBounds(const std::vector<float> &knot,
                        const int &m, const int &n, int k);
 void refineToBezier(std::vector<float> &knot, std::vector<Vec4f> &controlPoints,
                     int &p, int &m, int &n, int k, int base);
+
 #endif// CS171_ASSIGNMENT4_BEZIER_H

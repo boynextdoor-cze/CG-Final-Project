@@ -2,7 +2,7 @@
 #ifndef KDTREE_ACCEL_H_
 #define KDTREE_ACCEL_H_
 
-#include "bounds3.h"
+#include "aabb.h"
 #include "core.h"
 #include "geometry.h"
 #include "interaction.h"

@@ -39,7 +39,6 @@ class Object;
 class Vertex;
 class NURBS;
 class IntervalObject;
-class TrimCurve;
 struct BVHObjectInfo;
 struct LinearBVHNode;
 
