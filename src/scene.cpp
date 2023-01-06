@@ -168,6 +168,8 @@ void initSceneFromConfig(const Config &config, std::shared_ptr<Scene> &scene) {
 				exit(-1);
 			}
 
+			/*
+
 			std::vector<std::shared_ptr<LoopedTrimCurve>> loopedTrimCurves;
 			loopedTrimCurves.resize(nurbsData.trims.count);
 			int j = 0;
@@ -199,6 +201,8 @@ void initSceneFromConfig(const Config &config, std::shared_ptr<Scene> &scene) {
 			}
 
 			nurbsInstance->setTrimCurve(loopedTrimCurves);
+
+			*/
 
 			nurbsInstance->init();
 

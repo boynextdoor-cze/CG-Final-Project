@@ -73,7 +73,7 @@
           "nurbs_json_path" : "assets/largeModels/ring.json",
           "material_name" : "grey_diffuse",
           "translate": [0, 2500, 0],
-          "scale" : 10
+          "scale" : 12
 		}
 	]
 }

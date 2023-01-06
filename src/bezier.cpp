@@ -170,7 +170,7 @@ void NURBS::init() {
 	refineAndInitIntervalObject();
 	buildBVH();
 	// buildKDTree();
-	preprocessTrimCurves();
+	//preprocessTrimCurves();
 }
 
 std::pair<float, float> NURBS::evaluateN(std::vector<float> &knot, float t,
@@ -1241,7 +1241,7 @@ Bounds2 CurveSet::getBound() {
 }
 
 bool NURBS::intersectWithTrimCurve(float u, float v) {
-	return false;
+	return true;
 }
 
 void NURBS::preprocessTrimCurves() {

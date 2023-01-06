@@ -92,7 +92,6 @@ public:
 	void buildKDTree();
 	void preprocessTrimCurves();
 	void splitIntoMonotonic();
-	void build2DKDTree();
 	void init();
 	void setTrimCurve(const std::vector<std::shared_ptr<LoopedTrimCurve>> &trimCurves);
 
