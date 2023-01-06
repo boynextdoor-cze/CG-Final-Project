@@ -30,7 +30,7 @@ void Integrator::render() const {
 	auto start = std::chrono::steady_clock::now();
 #ifndef MY_DEBUG
 #pragma omp parallel for default(none), schedule(dynamic), \
-        shared(cnt, resolution, start), private(sampler)
+        shared(cnt, resolution, start, std::cout), private(sampler)
 #endif
 	for (int dx = 0; dx < resolution.x(); dx++) {
 #pragma omp critical

@@ -17,6 +17,7 @@ void Scene::addObject(const ObjectPtr &object) {
 void Scene::setLight(const std::shared_ptr<Light> &new_light) {
 	light = new_light;
 }
+
 bool Scene::isShadowed(Ray &shadow_ray, float light_dist) {
 	Interaction in;
 	if (bvh != nullptr) {
@@ -160,15 +161,16 @@ void initSceneFromConfig(const Config &config, std::shared_ptr<Scene> &scene) {
 			        nurbsData.degree_v + 1, controlPoints, weights, nurbsData.knotvector_u,
 			        nurbsData.knotvector_v, mat_list[nurbs.material_name]);
 
-			std::vector<std::vector<std::shared_ptr<TrimCurve>>> trimCurves;
-			trimCurves.resize(nurbsData.trims.count);
-
 			if (nurbsData.trims.count != nurbsData.trims.data.size()) {
 				std::cout << "NURBS json file has error, nurbsData.trims.count != "
 				             "nurbsData.trims.data.size() !!!"
 				          << std::endl;
 				exit(-1);
 			}
+
+			std::vector<std::shared_ptr<LoopedTrimCurve>> loopedTrimCurves;
+			loopedTrimCurves.resize(nurbsData.trims.count);
+			int j = 0;
 
 			for (auto &trim: nurbsData.trims.data) {
 
@@ -179,8 +181,6 @@ void initSceneFromConfig(const Config &config, std::shared_ptr<Scene> &scene) {
 					exit(-1);
 				}
 
-				std::vector<std::shared_ptr<TrimCurve>> trimCurve;
-				trimCurve.resize(trim.count);
 				for (int i = 0; i < trim.count; i++) {
 					std::vector<Vec2f> controlPoints2D;
 					std::vector<float> weights2D;
@@ -191,14 +191,14 @@ void initSceneFromConfig(const Config &config, std::shared_ptr<Scene> &scene) {
 					for (auto &weight: trim.data[i].control_points.weights) {
 						weights2D.push_back(weight);
 					}
-					trimCurve[i] = std::make_shared<TrimCurve>(
+					loopedTrimCurves[j]->addCurveSegment(CurveSegment(
 					        controlPoints2D, weights2D, trim.data[i].knotvector,
-					        controlPoints2D.size() - 1, trim.data[i].degree + 1);
+					        (int) (controlPoints2D.size() - 1), trim.data[i].degree + 1));
 				}
-				trimCurves.push_back(trimCurve);
+				++j;
 			}
 
-			nurbsInstance->setTrimCurve(trimCurves);
+			nurbsInstance->setTrimCurve(loopedTrimCurves);
 
 			nurbsInstance->init();
 

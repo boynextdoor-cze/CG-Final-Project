@@ -170,6 +170,7 @@ void NURBS::init() {
 	refineAndInitIntervalObject();
 	buildBVH();
 	// buildKDTree();
+	preprocessTrimCurves();
 }
 
 std::pair<float, float> NURBS::evaluateN(std::vector<float> &knot, float t,
@@ -873,9 +874,6 @@ bool NURBS::intersect(const Ray &ray, Interaction &interaction) const {
 		return result;
 	}
 }
-void NURBS::setTrimCurve(const std::vector<std::vector<std::shared_ptr<TrimCurve>>> &trimCurves) {
-	trim_curves = trimCurves;
-}
 
 std::vector<std::vector<Vec3f>> readControlPoints(const std::string &path,
                                                   int m, int n,
@@ -1118,6 +1116,9 @@ bool IntervalObject::intersect(const Ray &ray, Interaction &interaction) const {
 	NewtonIteration curIteration(u_0, v_0, surface, ray);
 	for (int iter = 0; iter < MAX_ITER; iter++) {
 		if (curIteration.norm < EPS) {
+			if (!surface->intersectWithTrimCurve((float)curIteration.u, (float)curIteration.v))
+				return false;
+
 			double t = (curIteration.p.position - ray.origin).dot(ray.direction);
 			if (t < ray.t_min || t > ray.t_max)
 				return false;
@@ -1186,7 +1187,7 @@ void testSurfacePatchBound(std::shared_ptr<NURBS> &surface, int i, int j) {
 		double u = dis_u(gen);
 		double v = dis_v(gen);
 		Vertex p = surface->evaluateWithNormal(u, v);
-		if (!bound.Inside(p.position, bound)) {
+		if (!Bounds3::Inside(p.position, bound)) {
 			std::cout
 			        << "ERROR::Test_Failed: error bound, surface point is not in bound!"
 			        << std::endl;
@@ -1207,10 +1208,43 @@ float multiplyForBSplineBasisFunction(float a, float b, float c) {
 	return a * b / c;
 }
 
-TrimCurve::TrimCurve(const std::vector<Vec2f> &_controlPoints, const std::vector<float> &_weight, const std::vector<float> &_knot, int _n, int _k) {
+void NURBS::setTrimCurve(const std::vector<std::shared_ptr<LoopedTrimCurve>> &loopedTrimCurves) {
+	looped_trim_curves = loopedTrimCurves;
+}
+
+CurveSegment::CurveSegment(const std::vector<Vec2f> &_controlPoints, const std::vector<float> &_weight, const std::vector<float> &_knot, int _n, int _k) {
 	controlPoints = _controlPoints;
 	weights = _weight;
 	knots = _knot;
 	n = _n;
 	order = _k;
 }
+
+Bounds2 CurveSegment::getBound() {
+	return Bounds2{controlPoints.front(), controlPoints.back()};
+}
+
+void LoopedTrimCurve::addCurveSegment(const CurveSegment &curve) {
+	curveSegments.push_back(curve);
+}
+
+CurveSet::CurveSet(std::vector<CurveSegment> &curve_elements) {
+	curveElements = curve_elements;
+}
+
+Bounds2 CurveSet::getBound() {
+	Bounds2 bound = Bounds2();
+	for (auto &curve : curveElements) {
+		bound = Union(bound, curve.getBound());
+	}
+	return bound;
+}
+
+bool NURBS::intersectWithTrimCurve(float u, float v) {
+	return false;
+}
+
+void NURBS::preprocessTrimCurves() {
+}
+
+

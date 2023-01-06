@@ -16,18 +16,41 @@ enum SamplingMode {
 	Adaptive,
 };
 
-class TrimCurve {
+class CurveSegment {
 public:
-	TrimCurve() = default;
-	~TrimCurve() = default;
+	CurveSegment() = default;
+	~CurveSegment() = default;
 
-	TrimCurve(const std::vector<Vec2f> &_controlPoints, const std::vector<float> &_weight, const std::vector<float> &_knot, int _n, int _k);
+	CurveSegment(const std::vector<Vec2f> &_controlPoints, const std::vector<float> &_weight, const std::vector<float> &_knot, int _n, int _k);
+	[[nodiscard]] Bounds2 getBound();
 
 	std::vector<Vec2f> controlPoints;
 	std::vector<float> weights;
 	std::vector<float> knots;
 	int n{};
 	int order{};
+};
+
+class LoopedTrimCurve {
+public:
+	LoopedTrimCurve() = default;
+	~LoopedTrimCurve() = default;
+
+	void addCurveSegment(const CurveSegment &curve);
+
+	std::vector<CurveSegment> curveSegments;
+};
+
+class CurveSet {
+public:
+	CurveSet() = default;
+	~CurveSet() = default;
+
+	explicit CurveSet(std::vector<CurveSegment> &curve_elements);
+
+	[[nodiscard]] Bounds2 getBound();
+
+	std::vector<CurveSegment> curveElements;
 };
 
 class NURBS : public std::enable_shared_from_this<NURBS>, public Object {
@@ -55,7 +78,7 @@ public:
 	BVHAccelPtr bvh;
 	KDTreeAccelPtr kdtree;
 	std::vector<std::shared_ptr<IntervalObject>> interval_objects;
-	std::vector<std::vector<std::shared_ptr<TrimCurve>>> trim_curves;
+	std::vector<std::shared_ptr<LoopedTrimCurve>> looped_trim_curves;
 
 	void setControlPoint(int i, int j, Vec3f point);
 	void setControlPoint(const std::vector<std::vector<Vec3f>> &_controlPoints);
@@ -67,8 +90,11 @@ public:
 	void refineAndInitIntervalObject();
 	void buildBVH();
 	void buildKDTree();
+	void preprocessTrimCurves();
+	void splitIntoMonotonic();
+	void build2DKDTree();
 	void init();
-	void setTrimCurve(const std::vector<std::vector<std::shared_ptr<TrimCurve>>> &trimCurves);
+	void setTrimCurve(const std::vector<std::shared_ptr<LoopedTrimCurve>> &trimCurves);
 
 	static std::pair<float, float> evaluateN(std::vector<float> &knot, float t,
 	                                         int i, int k);
@@ -82,6 +108,7 @@ public:
 	                                           int sampleNSize = 100);
 	Bounds3 getBounds() const override;
 	bool intersect(const Ray &ray, Interaction &interaction) const override;
+	bool intersectWithTrimCurve(float u, float v);
 };
 
 class IntervalObject : public Object {
