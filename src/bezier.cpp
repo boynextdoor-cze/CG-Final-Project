@@ -1097,6 +1097,7 @@ struct NewtonIteration {
 		F_2 = ray.n_2.dot(p.position) + ray.d_2;
 		norm = std::sqrt(F_1 * F_1 + F_2 * F_2);
 	}
+
 	double u, v;
 	double F_1, F_2;
 	double norm;
@@ -1116,7 +1117,7 @@ bool IntervalObject::intersect(const Ray &ray, Interaction &interaction) const {
 	NewtonIteration curIteration(u_0, v_0, surface, ray);
 	for (int iter = 0; iter < MAX_ITER; iter++) {
 		if (curIteration.norm < EPS) {
-			if (!surface->intersectWithTrimCurve((float)curIteration.u, (float)curIteration.v))
+			if (!surface->intersectWithTrimCurve((float) curIteration.u, (float) curIteration.v))
 				return false;
 
 			double t = (curIteration.p.position - ray.origin).dot(ray.direction);
@@ -1234,7 +1235,7 @@ CurveSet::CurveSet(std::vector<CurveSegment> &curve_elements) {
 
 Bounds2 CurveSet::getBound() {
 	Bounds2 bound = Bounds2();
-	for (auto &curve : curveElements) {
+	for (auto &curve: curveElements) {
 		bound = Union(bound, curve.getBound());
 	}
 	return bound;
@@ -1246,5 +1247,3 @@ bool NURBS::intersectWithTrimCurve(float u, float v) {
 
 void NURBS::preprocessTrimCurves() {
 }
-
-

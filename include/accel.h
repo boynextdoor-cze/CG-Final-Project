@@ -11,12 +11,15 @@
 
 // BVHAccel Forward Declarations
 struct BVHObjectInfo;
+
 struct LinearBVHNode {
 	Bounds3 bounds;
+
 	union {
 		int object_offset;// leaf
 		int right_offset; // interior
 	};
+
 	uint16_t objects_num;// 0 -> interior node
 	uint8_t split_axis;  // interior node: xyz
 	uint8_t padding;     // ensure 32 byte total size

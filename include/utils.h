@@ -40,8 +40,11 @@ namespace utils {
 class Sampler {
 public:
 	Sampler() = default;
+
 	float get1D() { return dis(engine); }
+
 	Vec2f get2D() { return {dis(engine), dis(engine)}; }
+
 	void setSeed(int i) { engine.seed(i); }
 
 private:

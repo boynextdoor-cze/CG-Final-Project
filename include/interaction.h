@@ -7,6 +7,7 @@ struct Interaction {
 	enum Type { LIGHT,
 		        GEOMETRY,
 		        NONE };
+
 	Vec3f pos{0, 0, 0};
 	float dist{RAY_DEFAULT_MAX};
 	Vec3f normal{0, 0, 0};

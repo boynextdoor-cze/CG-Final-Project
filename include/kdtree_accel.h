@@ -25,22 +25,30 @@ struct KDAccelNode {
 				objectIndices.push_back(curObjectIndices[i]);
 		}
 	}
+
 	void InitInterior(int axis, int ac, float s) {
 		split = s;
 		flags = axis;
 		aboveChild |= (ac << 2);
 	}
+
 	[[nodiscard]] float SplitPos() const { return split; }
+
 	[[nodiscard]] int TotalObjects() const { return totalObjects >> 2; }
+
 	[[nodiscard]] int SplitAxis() const { return flags & 3; }
+
 	[[nodiscard]] bool IsLeaf() const { return (flags & 3) == 3; }
+
 	[[nodiscard]] int AboveChild() const { return aboveChild >> 2; }
+
 	// Bounds3 bound;
 	union {
 		float split;            // Interior
 		int objectIndex;        // Leaf
 		int objectIndicesOffset;// Leaf
 	};
+
 	union {
 		int flags;       // Both
 		int totalObjects;// Leaf
@@ -50,13 +58,16 @@ struct KDAccelNode {
 
 enum class EdgeType { Start,
 	                  End };
+
 struct BoundEdge {
 	// BoundEdge Public Methods
 	BoundEdge() = default;
+
 	BoundEdge(float t, int objectIndex, bool starting)
 	    : t(t), objectIndex(objectIndex) {
 		type = starting ? EdgeType::Start : EdgeType::End;
 	}
+
 	float t;
 	int objectIndex;
 	EdgeType type;
@@ -69,7 +80,9 @@ public:
 	explicit KDTreeAccel(std::vector<ObjectPtr> &p, int intersectCost = 80,
 	                     int traversalCost = 1, float emptyBonus = 0.5,
 	                     int maxObjects = 2, int maxDepth = -1);
+
 	[[nodiscard]] Bounds3 getBounds() const { return bound; };
+
 	bool getIntersection(const Ray &ray, Interaction &interaction) const;
 
 private:

@@ -40,4 +40,5 @@ void Camera::setFov(float new_fov) { fov = new_fov; }
 float Camera::getFov() const { return fov; }
 
 void Camera::setImage(std::shared_ptr<ImageRGB> &img) { image = img; }
+
 std::shared_ptr<ImageRGB> &Camera::getImage() { return image; }

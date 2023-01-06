@@ -31,6 +31,7 @@ float IdealDiffusion::sample(Interaction &interaction, Sampler &sampler) const {
 	interaction.wi = (rotate * local_wi).normalized();
 	return pdf(interaction);
 }
+
 /// return whether the bsdf is perfect transparent or perfect reflection
 bool IdealDiffusion::isDelta() const { return false; }
 

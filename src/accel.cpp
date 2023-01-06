@@ -12,8 +12,10 @@ struct BVHObjectInfo {
 	int index{};
 	Bounds3 bound;
 	Vec3f centroid;
+
 	BVHObjectInfo(int _index, const Bounds3 &_bound)
 	    : index(_index), bound(_bound), centroid(_bound.Centroid()) {}
+
 	BVHObjectInfo() = default;
 };
 

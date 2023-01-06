@@ -21,7 +21,9 @@ public:
 	CurveSegment() = default;
 	~CurveSegment() = default;
 
-	CurveSegment(const std::vector<Vec2f> &_controlPoints, const std::vector<float> &_weight, const std::vector<float> &_knot, int _n, int _k);
+	CurveSegment(const std::vector<Vec2f> &_controlPoints,
+	             const std::vector<float> &_weight,
+	             const std::vector<float> &_knot, int _n, int _k);
 	[[nodiscard]] Bounds2 getBound();
 
 	std::vector<Vec2f> controlPoints;
@@ -93,7 +95,8 @@ public:
 	void preprocessTrimCurves();
 	void splitIntoMonotonic();
 	void init();
-	void setTrimCurve(const std::vector<std::shared_ptr<LoopedTrimCurve>> &trimCurves);
+	void
+	setTrimCurve(const std::vector<std::shared_ptr<LoopedTrimCurve>> &trimCurves);
 
 	static std::pair<float, float> evaluateN(std::vector<float> &knot, float t,
 	                                         int i, int k);

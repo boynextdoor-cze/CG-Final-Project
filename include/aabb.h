@@ -8,7 +8,7 @@ class AABB {
 	[[nodiscard]] virtual float SurfaceArea() const = 0;
 };
 
-class Bounds2 : public AABB{
+class Bounds2 : public AABB {
 public:
 	Vec2f pMin, pMax;// two points to specify the bounding box
 	Bounds2();

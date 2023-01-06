@@ -66,6 +66,7 @@ struct NURBSConfig {
 		std::vector<std::vector<float>> points;
 		std::vector<float> weights;
 	};
+
 	struct TrimCurveData {
 		ControlPoint control_points;
 		int degree;
@@ -75,16 +76,19 @@ struct NURBSConfig {
 		bool reversed;
 		TrimType type;
 	};
+
 	struct InnerTrimData {
 		int count;
 		std::vector<TrimCurveData> data;
 		bool reversed;
 		TrimType type;
 	};
+
 	struct TrimData {
 		int count;
 		std::vector<InnerTrimData> data;
 	};
+
 	struct NURBSData {
 		ControlPoint control_points;
 		int degree_u;
@@ -98,6 +102,7 @@ struct NURBSConfig {
 		int size_v;
 		TrimData trims;
 	};
+
 	int count;
 	std::vector<NURBSData> data;
 	NURBSShapeType type;

@@ -107,6 +107,7 @@ Bounds3 TriangleMesh::getBounds() const { return bound; }
 void TriangleMesh::setMaterial(std::shared_ptr<BSDF> &new_bsdf) {
 	bsdf = new_bsdf;
 }
+
 void TriangleMesh::buildBVH() {
 	assert(bsdf != nullptr);
 	std::vector<ObjectPtr> objects(v_indices.size() / 3);
