@@ -170,7 +170,7 @@ void NURBS::init() {
 	refineAndInitIntervalObject();
 	buildBVH();
 	// buildKDTree();
-	//preprocessTrimCurves();
+	preprocessTrimCurves();
 }
 
 std::pair<float, float> NURBS::evaluateN(std::vector<float> &knot, float t,
@@ -1117,7 +1117,9 @@ bool IntervalObject::intersect(const Ray &ray, Interaction &interaction) const {
 	NewtonIteration curIteration(u_0, v_0, surface, ray);
 	for (int iter = 0; iter < MAX_ITER; iter++) {
 		if (curIteration.norm < EPS) {
-			if (!surface->intersectWithTrimCurve((float) curIteration.u, (float) curIteration.v))
+			bool keep;
+			surface->intersectWithTrimCurve(Vec2f(curIteration.u, curIteration.v), surface->trimList, keep);
+			if (!keep)
 				return false;
 
 			double t = (curIteration.p.position - ray.origin).dot(ray.direction);
@@ -1213,37 +1215,138 @@ void NURBS::setTrimCurve(const std::vector<std::shared_ptr<LoopedTrimCurve>> &lo
 	looped_trim_curves = loopedTrimCurves;
 }
 
-CurveSegment::CurveSegment(const std::vector<Vec2f> &_controlPoints, const std::vector<float> &_weight, const std::vector<float> &_knot, int _n, int _k) {
+CurveSegment::CurveSegment(const std::vector<Vec2f> &_controlPoints, const std::vector<float> &_weight, const std::vector<float> &_knot, int _n, int _k, bool _rational, bool _reversed) {
 	controlPoints = _controlPoints;
 	weights = _weight;
 	knots = _knot;
 	n = _n;
 	order = _k;
+	rational = _rational;
+	reversed = _reversed;
+	if (reversed) {
+		std::reverse(controlPoints.begin(), controlPoints.end());
+		std::reverse(weights.begin(), weights.end());
+	}
 }
 
 Bounds2 CurveSegment::getBound() {
 	return Bounds2{controlPoints.front(), controlPoints.back()};
 }
 
-void LoopedTrimCurve::addCurveSegment(const CurveSegment &curve) {
-	curveSegments.push_back(curve);
+LoopedTrimCurve::LoopedTrimCurve(const std::vector<CurveSegment> &curve_segments) {
+	curveSegments = curve_segments;
 }
 
-CurveSet::CurveSet(std::vector<CurveSegment> &curve_elements) {
-	curveElements = curve_elements;
-}
-
-Bounds2 CurveSet::getBound() {
-	Bounds2 bound = Bounds2();
-	for (auto &curve: curveElements) {
-		bound = Union(bound, curve.getBound());
+void LoopedTrimCurve::checkOrientation() {
+	for (auto &curveSegment: curveSegments) {
+		controlPoints.push_back(curveSegment.controlPoints.front());
 	}
+	auto it = std::unique(controlPoints.begin(), controlPoints.end());
+	controlPoints.resize(std::distance(controlPoints.begin(), it));
+	float A = 0.0f;
+	for (size_t i = 0; i < controlPoints.size(); i++) {
+		size_t j = (i + 1) % (controlPoints.size() - 1);
+		A += controlPoints[i].x() * controlPoints[j].y() - controlPoints[j].x() * controlPoints[i].y();
+	}
+	isClockwise = (A < 0.0f);
+}
+
+void rootFinder(const std::vector<float> &derivative) {
+	std::vector<float> L = derivative;
+	std::vector<float> R(derivative.size(), 1);
+	float actRoot = 1.f;
+	float curRoot = 1.f;
+	float scale = 1.f;
+	float oldRoot = 1.f;
+}
+
+void LoopedTrimCurve::findExtrema() {
+	// split along u-direction
+	for (auto &curveSegment: curveSegments) {
+		std::vector<float> derivative;
+		if (curveSegment.rational)
+			continue;
+		for (int i = 0; i < curveSegment.n; i++) {
+			derivative.push_back(curveSegment.controlPoints[i + 1].x() - curveSegment.controlPoints[i].x());
+		}
+	}
+}
+
+Bounds2 LoopedTrimCurve::getBound() const {
 	return bound;
 }
 
-bool NURBS::intersectWithTrimCurve(float u, float v) {
+TrimList::TrimList(std::shared_ptr<LoopedTrimCurve> &trimCurve) {
+	trims.push_back(trimCurve);
+	bound = trimCurve->getBound();
+	isClockwise = trimCurve->isClockwise;
+}
+
+void TrimList::add(std::shared_ptr<LoopedTrimCurve> &newTrim) {
+	trims.push_back(newTrim);
+	bound = Union(bound, newTrim->getBound());
+}
+
+void TrimList::remove(std::shared_ptr<LoopedTrimCurve> &newTrim) {
+	trims.erase(std::remove(trims.begin(), trims.end(), newTrim), trims.end());
+	Bounds2 newBound;
+	for (auto &trim: trims) {
+		newBound = Union(newBound, trim->getBound());
+	}
+	bound = newBound;
+}
+
+Bounds2 TrimList::getBound() const {
+	return bound;
+}
+
+bool contain(std::shared_ptr<LoopedTrimCurve> &t, std::shared_ptr<LoopedTrimCurve> &newTrim) {
+	auto bound = t->getBound();
+	auto newBound = newTrim->getBound();
+	if (bound.pMin.x() > newBound.pMax.x() || bound.pMax.x() < newBound.pMin.x() ||
+	    bound.pMin.y() > newBound.pMax.y() || bound.pMax.y() < newBound.pMin.y())
+		return false;
 	return true;
 }
 
+void insert(std::shared_ptr<TrimList> &tl, std::shared_ptr<LoopedTrimCurve> &newTrim) {
+	if (tl == nullptr) {
+		tl = std::make_shared<TrimList>(newTrim);
+		return;
+	}
+	for (auto &t: tl->trims) {
+		if (contain(t, newTrim)) {
+			insert(t->trimList, newTrim);
+			return;
+		} else if (contain(newTrim, t)) {
+			insert(newTrim->trimList, t);
+			tl->remove(t);
+		}
+	}
+	tl->add(newTrim);
+}
+
 void NURBS::preprocessTrimCurves() {
+	for (auto &looped_trim_curve: looped_trim_curves) {
+		looped_trim_curve->checkOrientation();
+		looped_trim_curve->findExtrema();
+		float uMin = *std::min_element(looped_trim_curve->uExtrema.begin(), looped_trim_curve->uExtrema.end());
+		float uMax = *std::max_element(looped_trim_curve->uExtrema.begin(), looped_trim_curve->uExtrema.end());
+		float vMin = *std::min_element(looped_trim_curve->vExtrema.begin(), looped_trim_curve->vExtrema.end());
+		float vMax = *std::max_element(looped_trim_curve->vExtrema.begin(), looped_trim_curve->vExtrema.end());
+		looped_trim_curve->bound = Bounds2(uMin, vMin, uMax, vMax);
+		insert(trimList, looped_trim_curve);
+	}
+}
+
+void NURBS::intersectWithTrimCurve(const Vec2f &p, std::shared_ptr<TrimList> &tl, bool &keep) {
+	keep = !tl->isClockwise;
+	if (tl->getBound().Inside(p)) {
+		for (auto &t: tl->trims) {
+			if (t->getBound().Inside(p)) {
+				intersectWithTrimCurve(p, t->trimList, keep);
+				return;
+			}
+		}
+	}
 }

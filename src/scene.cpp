@@ -168,11 +168,7 @@ void initSceneFromConfig(const Config &config, std::shared_ptr<Scene> &scene) {
 				exit(-1);
 			}
 
-			/*
-
 			std::vector<std::shared_ptr<LoopedTrimCurve>> loopedTrimCurves;
-			loopedTrimCurves.resize(nurbsData.trims.count);
-			int j = 0;
 
 			for (auto &trim: nurbsData.trims.data) {
 
@@ -182,6 +178,8 @@ void initSceneFromConfig(const Config &config, std::shared_ptr<Scene> &scene) {
 					          << std::endl;
 					exit(-1);
 				}
+
+				std::vector<CurveSegment> curveSegments;
 
 				for (int i = 0; i < trim.count; i++) {
 					std::vector<Vec2f> controlPoints2D;
@@ -193,16 +191,14 @@ void initSceneFromConfig(const Config &config, std::shared_ptr<Scene> &scene) {
 					for (auto &weight: trim.data[i].control_points.weights) {
 						weights2D.push_back(weight);
 					}
-					loopedTrimCurves[j]->addCurveSegment(CurveSegment(
+					curveSegments.emplace_back(
 					        controlPoints2D, weights2D, trim.data[i].knotvector,
-					        (int) (controlPoints2D.size() - 1), trim.data[i].degree + 1));
+					        (int) (controlPoints2D.size() - 1), trim.data[i].degree + 1, trim.data[i].rational, trim.data[i].reversed);
 				}
-				++j;
+				loopedTrimCurves.emplace_back(std::make_shared<LoopedTrimCurve>(curveSegments));
 			}
 
 			nurbsInstance->setTrimCurve(loopedTrimCurves);
-
-			*/
 
 			nurbsInstance->init();
 

@@ -134,6 +134,11 @@ Bounds2::Bounds2(const Vec2f &p1, const Vec2f &p2) {
 	pMax = p1.cwiseMax(p2);
 }
 
+Bounds2::Bounds2(const float &uMin, const float &vMin, const float &uMax, const float &vMax) {
+	pMin = Vec2f(uMin, vMin);
+	pMax = Vec2f(uMax, vMax);
+}
+
 int Bounds2::maxExtent() const {
 	Vec2f d = Diagonal();
 	if (d.x() > d.y())
@@ -177,6 +182,10 @@ bool Bounds2::Overlaps(const Bounds2 &b1, const Bounds2 &b2) {
 bool Bounds2::Inside(const Vec2f &p, const Bounds2 &b) {
 	return (p.x() >= b.pMin.x() && p.x() <= b.pMax.x() &&
 	        p.y() >= b.pMin.y() && p.y() <= b.pMax.y());
+}
+bool Bounds2::Inside(const Vec2f &p) {
+	return (p.x() >= pMin.x() && p.x() <= pMax.x() &&
+	        p.y() >= pMin.y() && p.y() <= pMax.y());
 }
 
 Bounds2 Union(const Bounds2 &b1, const Bounds2 &b2) {

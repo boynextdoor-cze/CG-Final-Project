@@ -13,6 +13,7 @@ public:
 	Vec2f pMin, pMax;// two points to specify the bounding box
 	Bounds2();
 	Bounds2(const Vec2f &p1, const Vec2f &p2);
+	Bounds2(const float &uMin, const float &vMin, const float &uMax, const float &vMax);
 	[[nodiscard]] int maxExtent() const override;
 	[[nodiscard]] Vec2f Diagonal() const;
 	[[nodiscard]] float SurfaceArea() const override;
@@ -21,6 +22,7 @@ public:
 	[[nodiscard]] Vec2f Offset(const Vec2f &p) const;
 	[[nodiscard]] static bool Overlaps(const Bounds2 &b1, const Bounds2 &b2);
 	[[nodiscard]] static bool Inside(const Vec2f &p, const Bounds2 &b);
+	[[nodiscard]] bool Inside(const Vec2f &p);
 };
 
 class Bounds3 : public AABB {

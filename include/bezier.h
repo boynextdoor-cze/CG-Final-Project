@@ -23,7 +23,7 @@ public:
 
 	CurveSegment(const std::vector<Vec2f> &_controlPoints,
 	             const std::vector<float> &_weight,
-	             const std::vector<float> &_knot, int _n, int _k);
+	             const std::vector<float> &_knot, int _n, int _k, bool _rational, bool _reversed);
 	[[nodiscard]] Bounds2 getBound();
 
 	std::vector<Vec2f> controlPoints;
@@ -31,28 +31,44 @@ public:
 	std::vector<float> knots;
 	int n{};
 	int order{};
+	bool rational{};
+	bool reversed{};
 };
+
+class TrimList {
+public:
+	TrimList() = default;
+	~TrimList() = default;
+
+	explicit TrimList(std::shared_ptr<LoopedTrimCurve> &trimCurve);
+	[[nodiscard]] Bounds2 getBound() const;
+
+	void remove(std::shared_ptr<LoopedTrimCurve> &newTrim);
+	void add(std::shared_ptr<LoopedTrimCurve> &newTrim);
+
+	std::vector<std::shared_ptr<LoopedTrimCurve>> trims;
+	Bounds2 bound;
+	bool isClockwise{};
+};
+
 
 class LoopedTrimCurve {
 public:
 	LoopedTrimCurve() = default;
 	~LoopedTrimCurve() = default;
 
-	void addCurveSegment(const CurveSegment &curve);
+	explicit LoopedTrimCurve(const std::vector<CurveSegment> &curve_segments);
+
+	void findExtrema();
+	void checkOrientation();
+	[[nodiscard]] Bounds2 getBound() const;
 
 	std::vector<CurveSegment> curveSegments;
-};
-
-class CurveSet {
-public:
-	CurveSet() = default;
-	~CurveSet() = default;
-
-	explicit CurveSet(std::vector<CurveSegment> &curve_elements);
-
-	[[nodiscard]] Bounds2 getBound();
-
-	std::vector<CurveSegment> curveElements;
+	std::vector<Vec2f> controlPoints;
+	std::vector<float> uExtrema, vExtrema;
+	std::shared_ptr<TrimList> trimList;
+	bool isClockwise{};
+	Bounds2 bound;
 };
 
 class NURBS : public std::enable_shared_from_this<NURBS>, public Object {
@@ -81,6 +97,7 @@ public:
 	KDTreeAccelPtr kdtree;
 	std::vector<std::shared_ptr<IntervalObject>> interval_objects;
 	std::vector<std::shared_ptr<LoopedTrimCurve>> looped_trim_curves;
+	std::shared_ptr<TrimList> trimList{nullptr};
 
 	void setControlPoint(int i, int j, Vec3f point);
 	void setControlPoint(const std::vector<std::vector<Vec3f>> &_controlPoints);
@@ -93,7 +110,6 @@ public:
 	void buildBVH();
 	void buildKDTree();
 	void preprocessTrimCurves();
-	void splitIntoMonotonic();
 	void init();
 	void
 	setTrimCurve(const std::vector<std::shared_ptr<LoopedTrimCurve>> &trimCurves);
@@ -110,7 +126,7 @@ public:
 	                                           int sampleNSize = 100);
 	Bounds3 getBounds() const override;
 	bool intersect(const Ray &ray, Interaction &interaction) const override;
-	bool intersectWithTrimCurve(float u, float v);
+	static void intersectWithTrimCurve(const Vec2f &p, std::shared_ptr<TrimList> &tl, bool &keep);
 };
 
 class IntervalObject : public Object {
@@ -121,6 +137,7 @@ public:
 	std::shared_ptr<BSDF> bsdf;
 	std::shared_ptr<NURBS> surface;
 	Bounds3 bound;
+	bool isTrimmed{};
 	// surface patch [knotU[i], knotU[i + 1]) x [knotV[j], knotV[j + 1])
 	int i{}, j{};
 	void updateBounds();
