@@ -153,9 +153,14 @@ void NURBS::refineAndInitIntervalObject() {
 }
 
 void NURBS::buildBVH() {
-	std::vector<ObjectPtr> objects(interval_objects.size());
-	for (int i = 0; i < objects.size(); i++)
-		objects[i] = interval_objects[i];
+//	std::vector<ObjectPtr> objects(interval_objects.size());
+//	for (int i = 0; i < objects.size(); i++)
+//		objects[i] = interval_objects[i];
+	std::vector<ObjectPtr> objects;
+	for (auto &obj : interval_objects){
+		if (!obj->isTrimmed)
+			objects.push_back(obj);
+	}
 	bvh = std::make_shared<BVHAccel>(objects, 5);
 }
 
@@ -167,10 +172,10 @@ void NURBS::buildKDTree() {
 }
 
 void NURBS::init() {
+	preprocessTrimCurves();
 	refineAndInitIntervalObject();
 	buildBVH();
 	// buildKDTree();
-	preprocessTrimCurves();
 }
 
 std::pair<float, float> NURBS::evaluateN(std::vector<float> &knot, float t,
