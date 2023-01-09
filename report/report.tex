@@ -401,7 +401,6 @@ $$
 \begin{aligned}
 \mathbf{c}^{\prime}\left(t_*\right) & =(k-1)\left[\frac{\frac{\mathbf{D}_{\mu-\mathbf{k}+2}^\omega-\mathbf{D}_{\mu-\mathbf{k}+\mathbf{1}}^\omega}{t_{\mu+1}-t_{\mu-k+2}} \omega_{\mu-k+1}-\mathbf{D}_{\mu-\mathbf{k}+\mathbf{1}}^\omega \frac{\omega_{\mu-k+2}-\omega_{\mu-k+1}}{t_{\mu+1}-t_{\mu-k+2}}}{\omega_{\mu-k+1}^2}\right] \\
 & =\frac{k-1}{\left(t_{\mu+1}-t_{\mu-k+2}\right) \omega_{\mu-k+1}}\left[\mathbf{D}_{\mu-\mathbf{k + 2}}^\omega-\mathbf{D}_{\mu-\mathbf{k}+\mathbf{1}}^\omega \frac{\omega_{\mu-k+2}}{\omega_{\mu-k+1}}\right] \\
-& =\frac{k-1}{\left(t_{\mu+1}-t_{\mu-k+2}\right) \omega_{\mu-k+1}}\left[\omega_{\mu-k+2} \mathbf{D}_{\mu-\mathbf{k}+\mathbf{2}}-\omega_{\mu-k+1} \mathbf{D}_{\mu-\mathbf{k}+\mathbf{1}} \frac{\omega_{\mu-k+2}}{\omega_{\mu-k+1}}\right] \\
 & =\frac{(k-1) \omega_{\mu-k+2}}{\left(t_{\mu+1}-t_*\right) \omega_{\mu-k+1}}\left[\mathbf{D}_{\mu-\mathbf{k}+\mathbf{2}}-\mathbf{D}_{\mu-\mathbf{k}+\mathbf{1}}\right] .
 \end{aligned}
 $$
@@ -424,7 +423,31 @@ After getting the normal and derivatives, we can easily render the entire NURBS 
 
 \textbf{Until now, we have fully elaborated all the algorithms needed. As long as combining all of them appropriately, we can successfully render the untrimmed NURBS surface using a ray tracer without tessellating the surface.}
 
-\section{Results}
+\section{Trimmed NURBS surface rendering}
 
+\section{Results}
+For the untrimmed NURBS surface rendering, we successfully render a duck using different algorithms. The duck only consists of three NURBS surface patches. The scene is rendered with resolution $1080\times 1080$ and samples-per-pixel (spp) $1024$.
+
+For reference, we firstly render the duck with tessellation. Then, we will show the duck rendered by different methods without tessellation.
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.45\textwidth]{../results/result_mesh_1080_1024.png}
+    \caption{Duck rendered using tessellation}
+\end{figure}
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.45\textwidth]{../results/result_bvh_1080_1024.png}
+    \caption{Duck rendered using BVH}
+\end{figure}
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.45\textwidth]{../results/result_3x3_bvh.png}
+    \caption{Multiple ducks rendered using BVH}
+\end{figure}
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.45\textwidth]{../results/result_3x3_kdtree.png}
+    \caption{Multiple ducks rendered using KD-Tree}
+\end{figure}
 
 \end{document}
