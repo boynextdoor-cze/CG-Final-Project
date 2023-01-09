@@ -1400,7 +1400,7 @@ Computing Machinery]
             %\@permissionCodeOne/\@acmYear/\@acmMonth-ART\@acmArticle
             %\ifx\@acmPrice\@empty\else\ \$\@acmPrice\fi\\
             %\@formatdoi{\@acmDOI}%
-            Computer Graphics I Course Assignment
+            Computer Graphics I Final Project
           \else % Conference
              ACM~ISBN~\@acmISBN
              \ifx\@acmPrice\@empty.\else\dots\$\@acmPrice\fi\\
