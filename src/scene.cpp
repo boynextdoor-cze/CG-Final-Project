@@ -185,8 +185,7 @@ void initSceneFromConfig(const Config &config, std::shared_ptr<Scene> &scene) {
 					std::vector<Vec2f> controlPoints2D;
 					std::vector<float> weights2D;
 					for (auto &point: trim.data[i].control_points.points) {
-						controlPoints2D.emplace_back(Vec2f(point[0], point[1]) * nurbs.scale +
-						                             Vec2f(nurbs.translate[0], nurbs.translate[1]));
+						controlPoints2D.emplace_back(point[0], point[1]);
 					}
 					for (auto &weight: trim.data[i].control_points.weights) {
 						weights2D.push_back(weight);
