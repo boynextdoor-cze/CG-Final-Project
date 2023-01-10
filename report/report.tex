@@ -248,7 +248,7 @@ The convex hull property of B-spline surfaces guarantees that the surface is con
 \hspace*{8pt}
 In spite of BVH, we also built a kd-tree as the acceleration structure. The kd-tree is a binary tree, where each node is a hyperplane that splits the space into two subspaces. The kd-tree is constructed by recursively partitioning the space into two subspaces. The splitting hyperplane is chosen following the Surface-Area Heuristics (SAH) function. The kd-tree is used to accelerate the intersection test between the ray and the AABBs. The leaf nodes of kd-tree contains multiple AABBs, which is already elaborated in the above subsection. The intersection test is performed by traversing the kd-tree. At each node, the ray is tested against the splitting hyperplane. If the ray intersects the splitting hyperplane, the ray is tested against the two subspaces recursively. Once the traversal comes to the leaf node, we perform intersection test with the ray and the corresponding AABBs, then return the closest intersection point.
 
-In section 3, we will compare the speed and accuracy of BVH and KD-Tree, to find out which acceleration structure is better for the NURBS surface intersection situation.
+In practice, the KD-Tree is built for every NURBS surface, and the whole scene is still maintained by a BVH, with leaf nodes change to maintain multiple KD-Trees. However, althought we tried to optimize the contruction process, the combination of the BVH and the KD-Tree is not fast enough.
 
 \subsection{Refined Control Points Evaluation}
 \hspace*{8pt}
