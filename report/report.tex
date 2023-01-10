@@ -26,8 +26,8 @@
 % Title portion
 \title{Final Project: {Ray Tracing Trimmed NURBS}}
 
-\author{Name:\quad Zeen Chi, Wenchao Li  \\ student number:\ 2020533089
-\\email:\quad \{chize, liwch\}@shanghaitech.edu.cn}
+\author{Name:\quad Zeen Chi, Wenchao Li  \\ student number:\ 2020533089, 2020533159
+\\email:\quad \{chize, liwch1\}@shanghaitech.edu.cn}
 
 % Document starts
 \begin{document}
@@ -429,7 +429,7 @@ Trimming curves are a common method for overcoming the topologically rectangular
 
 A trimming curve is a closed, oriented curve which lies on a NURBS surface. For our purposes, the curve will consist of piecewise linear segments in parametric space $\left\{\mathbf{p}_{\mathbf{i}}=\left(u_i, v_i\right)\right\}$. In real-world model, a single looped trimming curve may consist of multiple curve segments, whose control points are end to end.
 
-We calculate the orientation of the curve using the method of Rokne [23] for computing the area of a polygon. Given parametric points $\left\{\mathbf{p}_{\mathbf{i}}=\left(u_i, v_i\right)\right\}, i=0 \ldots n$, the signed area can be computed by
+We calculate the orientation of the curve using the method of Rokne for computing the area of a polygon. Given parametric points $\left\{\mathbf{p}_{\mathbf{i}}=\left(u_i, v_i\right)\right\}, i=0 \ldots n$, the signed area can be computed by
 $$
 A=\frac{1}{2} \sum_{i=0}^n u_i v_{(i+1) \bmod n}-u_{(i+1) \bmod n} v_i .
 $$
@@ -464,7 +464,23 @@ We ray trace trimmed NURBS by first performing ray intersection with the untrimm
 
 \subsection{Containment Checking}
 \hspace*{8pt}
-In the algorithm shown above, a problem is yet to be solved, that how to determine whether a point $(u_*,v_*)$ is inside a trimming loop.
+In the algorithm shown above, a problem is yet to be solved, that how to determine whether a point $(u_*,v_*)$ is inside a trimming loop. It can be solved by using a corollary of the Jordan curve theorem and the Bezier clipping algorithm. The Bezier clipping algorithm determines if a ray intersects a collection of NURBS trimming curves an even or odd number of times with high robustness. The algorithm begins by splitting the patch parameter plane into quadrants which meet at the point $\mathbf{S} = (s, t)$ as shown in Fig. 5, 
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.3\textwidth, height=0.25\textwidth]{quadrants.png}
+    \caption{Quadrants}
+\end{figure}
+
+. To determine if $\mathbf{R}$ (the ray) intersects a given NURBS trimming curve an even or odd number of times, we categorize the curve based on which quadrants its control points occupy. For now, assume that no end control point lies on a quadrant boundary.
+
+\begin{itemize}
+    \item CASE $\mathcal{A}$ : All control points lie on the same side of the line containing $\mathbf{R}$ (in quadrants I, II, III, IV, I\&II, or III\&IV) or "behind" $R$ ( in quadrants I\&III). The convex hull property of NURBS curves guarantees zero intersections with $\mathbf{R}$.
+    \item CASE $\mathcal{B}$ : All control points lie in quadrants I\&IV, but not case $\mathcal{A}$. Since the curve is continuous and obeys the convex hull property, if the curve endpoints lie in the same quadrant, the curve crosses $\mathbf{R}$ an even number of times. Otherwise, the curve intersects $\mathbf{R}$ an odd number of times. Note that tangencies between the ray and trimming-curve tangencies, even those of high order, do not pose a problem. The only question is whether the curve endpoints straddle the ray.
+    \item CASE $C:$ All other curves.
+\end{itemize}
+
+If a curve is case $\mathcal{A}$ or $\mathcal{B}$ no further processing is needed to determine its intersection parity with a ray. For a case $\mathcal{C}$ curve, we subdivide it using the de Boor's algorithm into three NURBS segments in such a way that the two end segments are guaranteed a priori to be case $\mathcal{A}$ or $\mathcal{B}$. Then we can easily determine whether $\mathbf{S} = (s, t)$ is in a closed NURBS trimming curve or not.
 
 \section{Results}
 For the untrimmed NURBS surface rendering, we successfully render different models. The duck only consists of three NURBS surface patches. For a single NURBS model, the scene is rendered with resolution $600\times 600$ and samples-per-pixel (spp) $256$. For the scene with 25 ducks, we set resolution be $300\times 300$, and spp be $1024$, which helps for noise reduction.
