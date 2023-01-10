@@ -142,12 +142,12 @@ void initSceneFromConfig(const Config &config, std::shared_ptr<Scene> &scene) {
 			std::vector<std::vector<float>> weights(
 			        nurbsData.size_u, std::vector<float>(nurbsData.size_v));
 			Mat4f rotate_x, rotate_y, rotate_z;
-			float x_radians = 0.f * PI / 180.f;
+			float x_radians = 270.f * PI / 180.f;
 			rotate_x << 1, 0, 0, 0,
 			        0, std::cos(x_radians), -std::sin(x_radians), 0,
 			        0, std::sin(x_radians), std::cos(x_radians), 0,
 			        0, 0, 0, 1;
-			float y_radians = 0.f * PI / 180.f;
+			float y_radians = 45.f * PI / 180.f;
 			rotate_y << std::cos(y_radians), 0, std::sin(y_radians), 0,
 			        0, 1, 0, 0,
 			        -std::sin(y_radians), 0, std::cos(y_radians), 0,
