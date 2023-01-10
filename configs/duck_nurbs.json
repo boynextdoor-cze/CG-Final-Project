@@ -72,8 +72,8 @@
       {
         "nurbs_json_path" : "assets/ducks/duck.json",
         "material_name" : "grey_diffuse",
-        "translate": [-0.2, 1.0, 0],
-        "scale" : 0.1
+        "translate": [-0.2, 0.9, 0],
+        "scale" : 0.2
       }
 	]
 }

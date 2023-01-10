@@ -20,6 +20,7 @@ using Mat2d = Eigen::Matrix2d;
 using Vec4d = Eigen::Vector4d;
 using Vec3d = Eigen::Vector3d;
 using Vec2d = Eigen::Vector2d;
+using Mat4f = Eigen::Matrix4f;
 
 constexpr float RAY_DEFAULT_MIN = 1e-5;
 constexpr float RAY_DEFAULT_MAX = 1e7;

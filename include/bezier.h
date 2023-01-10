@@ -63,7 +63,7 @@ public:
 	      const std::vector<std::vector<Vec3f>> &_controlPoints,
 	      const std::vector<std::vector<float>> &_weight,
 	      const std::vector<float> &_knotM, const std::vector<float> &_knotN,
-	      std::shared_ptr<BSDF> &bsdf);
+	      std::shared_ptr<BSDF> &bsdf, bool _reversed);
 	NURBS(int m, int n, int k, int l,
 	      const std::vector<std::vector<Vec3f>> &_controlPoints,
 	      const std::vector<float> &_knotM, const std::vector<float> &_knotN,
@@ -73,6 +73,7 @@ public:
 	std::vector<std::vector<float>> weight;
 	std::vector<float> knotM, knotN;
 	int k{}, l{}, u_m{}, v_m{}, u_n{}, v_n{}, u_p{}, v_p{};
+	bool reversed{false};
 	Bounds3 bound;
 	std::shared_ptr<BSDF> bsdf;
 	BVHAccelPtr bvh;

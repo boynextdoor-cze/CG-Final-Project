@@ -72,10 +72,10 @@ NURBS::NURBS(int _m, int _n, int _k, int _l,
              const std::vector<std::vector<Vec3f>> &_controlPoints,
              const std::vector<std::vector<float>> &_weight,
              const std::vector<float> &_knotM, const std::vector<float> &_knotN,
-             std::shared_ptr<BSDF> &_bsdf)
+             std::shared_ptr<BSDF> &_bsdf, const bool _reversed)
     : u_m(_m + _k), u_n(_m), u_p(_k - 1), v_m(_n + _l), v_n(_n), v_p(_l - 1),
       k(_k), l(_l), controlPoints(_controlPoints), weight(_weight),
-      knotM(_knotM), knotN(_knotN), bsdf(_bsdf) {
+      knotM(_knotM), knotN(_knotN), bsdf(_bsdf), reversed(_reversed) {
 	if (u_m < 0 || u_n < 0 || u_p < 0 || v_m < 0 || v_n < 0 || v_p < 0 ||
 	    controlPoints.size() != u_n + 1 ||
 	    controlPoints.back().size() != v_n + 1 || weight.size() != u_n + 1 ||
@@ -83,6 +83,34 @@ NURBS::NURBS(int _m, int _n, int _k, int _l,
 	    knotN.size() != v_m + 1) {
 		std::cout << "ERROR::NURBS: Initialize error!" << std::endl;
 		exit(-1);
+	}
+	if (_reversed) {
+		std::vector<std::vector<Vec3f>> transpose_control;
+		for (int i = 0; i < controlPoints.size(); i++) {
+			for (int j = 0; j < controlPoints[i].size(); j++) {
+				if (i == 0) {
+					transpose_control.emplace_back();
+				}
+				transpose_control[j].push_back(controlPoints[i][j]);
+			}
+		}
+		controlPoints = transpose_control;
+		std::vector<std::vector<float>> transpose_weight;
+		for (int i = 0; i < weight.size(); i++) {
+			for (int j = 0; j < weight[i].size(); j++) {
+				if (i == 0) {
+					transpose_weight.emplace_back();
+				}
+				transpose_weight[j].push_back(weight[i][j]);
+			}
+		}
+		weight = transpose_weight;
+
+		std::swap(knotM, knotN);
+		std::swap(k,l);
+		std::swap(u_m, v_m);
+		std::swap(u_n, v_n);
+		std::swap(u_p, v_p);
 	}
 }
 
@@ -1097,6 +1125,7 @@ struct NewtonIteration {
 		F_2 = ray.n_2.dot(p.position) + ray.d_2;
 		norm = std::sqrt(F_1 * F_1 + F_2 * F_2);
 	}
+
 	double u, v;
 	double F_1, F_2;
 	double norm;
@@ -1116,7 +1145,7 @@ bool IntervalObject::intersect(const Ray &ray, Interaction &interaction) const {
 	NewtonIteration curIteration(u_0, v_0, surface, ray);
 	for (int iter = 0; iter < MAX_ITER; iter++) {
 		if (curIteration.norm < EPS) {
-			if (!surface->intersectWithTrimCurve((float)curIteration.u, (float)curIteration.v))
+			if (!surface->intersectWithTrimCurve((float) curIteration.u, (float) curIteration.v))
 				return false;
 
 			double t = (curIteration.p.position - ray.origin).dot(ray.direction);
@@ -1234,7 +1263,7 @@ CurveSet::CurveSet(std::vector<CurveSegment> &curve_elements) {
 
 Bounds2 CurveSet::getBound() {
 	Bounds2 bound = Bounds2();
-	for (auto &curve : curveElements) {
+	for (auto &curve: curveElements) {
 		bound = Union(bound, curve.getBound());
 	}
 	return bound;
@@ -1246,5 +1275,3 @@ bool NURBS::intersectWithTrimCurve(float u, float v) {
 
 void NURBS::preprocessTrimCurves() {
 }
-
-

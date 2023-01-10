@@ -118,6 +118,8 @@ void initSceneFromConfig(const Config &config, std::shared_ptr<Scene> &scene) {
 			exit(-1);
 		}
 
+		Bounds3 bound;
+
 		for (auto &nurbsData: nurbsConfig.data) {
 			if (nurbsData.control_points.points.size() !=
 			    nurbsData.control_points.weights.size()) {
@@ -139,12 +141,23 @@ void initSceneFromConfig(const Config &config, std::shared_ptr<Scene> &scene) {
 			        nurbsData.size_u, std::vector<Vec3f>(nurbsData.size_v));
 			std::vector<std::vector<float>> weights(
 			        nurbsData.size_u, std::vector<float>(nurbsData.size_v));
+			Mat4f rotate_x, rotate_y;
+			rotate_x << 1, 0, 0, 0,
+			        0, 0, 1, 0,
+			        0, -1, 0, 0,
+			        0, 0, 0, 1;
+			float y_radians = 45.f * PI / 180.f;
+			rotate_y << std::cos(y_radians), 0, std::sin(y_radians), 0,
+			        0, 1, 0, 0,
+			        -std::sin(y_radians), 0, std::cos(y_radians), 0,
+			        0, 0, 0, 1;
 			for (int i = 0; i < nurbsData.size_u; i++)
 				for (int j = 0; j < nurbsData.size_v; j++) {
 					controlPoints[i][j] = {
 					        nurbsData.control_points.points[i * nurbsData.size_v + j][0],
 					        nurbsData.control_points.points[i * nurbsData.size_v + j][1],
 					        nurbsData.control_points.points[i * nurbsData.size_v + j][2]};
+					controlPoints[i][j] = (rotate_y * rotate_x * controlPoints[i][j].homogeneous()).head(3);
 					controlPoints[i][j] =
 					        controlPoints[i][j] * nurbs.scale +
 					        Vec3f(nurbs.translate[0], nurbs.translate[1], nurbs.translate[2]);
@@ -159,7 +172,7 @@ void initSceneFromConfig(const Config &config, std::shared_ptr<Scene> &scene) {
 			std::shared_ptr<NURBS> nurbsInstance = std::make_shared<NURBS>(
 			        nurbsData.size_u - 1, nurbsData.size_v - 1, nurbsData.degree_u + 1,
 			        nurbsData.degree_v + 1, controlPoints, weights, nurbsData.knotvector_u,
-			        nurbsData.knotvector_v, mat_list[nurbs.material_name]);
+			        nurbsData.knotvector_v, mat_list[nurbs.material_name], nurbsData.reversed);
 
 			if (nurbsData.trims.count != nurbsData.trims.data.size()) {
 				std::cout << "NURBS json file has error, nurbsData.trims.count != "
@@ -206,8 +219,12 @@ void initSceneFromConfig(const Config &config, std::shared_ptr<Scene> &scene) {
 
 			nurbsInstance->init();
 
+			bound = Union(bound, nurbsInstance->getBounds());
+
 			scene->addObject(nurbsInstance);
 		}
+		std::cout << bound.pMin.x() << ' ' << bound.pMin.y() << ' ' << bound.pMin.z() << std::endl;
+		std::cout << bound.pMax.x() << ' ' << bound.pMax.y() << ' ' << bound.pMax.z() << std::endl;
 	}
 
 	//   std::shared_ptr<BSDF> GREEN, YELLOW;

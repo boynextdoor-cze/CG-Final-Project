@@ -1143,7 +1143,7 @@
 				3.14159
 			],
 			"rational": true,
-			"reversed": true,
+			"reversed": false,
 			"size_u": 14,
 			"size_v": 13,
 			"trims": {
@@ -1733,7 +1733,7 @@
 				1
 			],
 			"rational": true,
-			"reversed": true,
+			"reversed": false,
 			"size_u": 9,
 			"size_v": 10,
 			"trims": {
@@ -1992,7 +1992,7 @@
 				1
 			],
 			"rational": true,
-			"reversed": true,
+			"reversed": false,
 			"size_u": 6,
 			"size_v": 6,
 			"trims": {
