@@ -42,9 +42,9 @@ Computer Aided Design (CAD) modeling tools are widely used for the industrial de
 In this final project, we implement a ray tracing system that can render an arbitrary NURBS surface without tessellation. The outline of our approach can be briefly described by Figure 1. We create a set of boxes that bound the underlying surface over a given parametric range. The ray is tested for intersection with these boxes, and for a particular box that is hit, a parametric value within the box is used to initiate root finding. The key issues are determining which boxes to use, how to efficiently manage computing intersections with them, how to do the root finding, and how to efficiently evaluate the geometry for a given parametric value.
 We use refinement to generate the bounding volume hierarchy, which results in a shallower tree depth than other subdivision-based methods. We also use an efficient refinement-based point evaluation method to speed root-finding. These choices turn out to be both reasonable to implement and efficient.
 
-In section 2 we present the bulk of our method, in particular how to create a hierarchy of bounding boxes and how to perform root finding within a single box to compute an intersection with an untrimmed NURBS surface. In Section 3 we describe how to extend the method to trimmed NURBS surfaces.
+In Section 2 we present the bulk of our method, in particular how to create a hierarchy of bounding boxes and how to perform root finding within a single box to compute an intersection with an untrimmed NURBS surface. In Section 3 we describe how to extend the method to trimmed NURBS surfaces. In Section 4 we will show the results of our implementation. Finally, in Section 5 we will briefly talk about our workload distribution.
 
-As for the result, we render different NURBS surface models with different complexity. We found a duck model that consists of three NURBS patches and rendered it to justify the correctness and efficiency of the untrimmed NURBS rendering scheme. We also found some complex trimmed NURBS models, e.g. Eiffel Tower and a very intricate ring, to show the correctness of the trimmed NURBS rendering scheme.
+As for the result, we render different NURBS surface models with different complexity. We found a duck model that consists of three NURBS patches and rendered it to justify the correctness and efficiency of the untrimmed NURBS rendering scheme. We also found some complex trimmed NURBS models, e.g. Eiffel Tower and a very intricate ring, to show the correctness of the trimmed NURBS surface rendering scheme.
 
 \textbf{Note: the formulae derivation described in this report are not derived by us. We list them only to clarify the correctness of the corresponding formulae. However, every part of the algorithms described below is fully implemented by ourselves.}
 
@@ -424,30 +424,72 @@ After getting the normal and derivatives, we can easily render the entire NURBS 
 \textbf{Until now, we have fully elaborated all the algorithms needed. As long as combining all of them appropriately, we can successfully render the untrimmed NURBS surface using a ray tracer without tessellating the surface.}
 
 \section{Trimmed NURBS surface rendering}
+\hspace*{8pt}
+Trimming curves are a common method for overcoming the topologically rectangular limitations of NURBS surfaces. They re- sult typically when designers wish to remove sections from models which are not aligned with the underlying parameterization. In this section, we will define what we mean by trimming curves.
+
+A trimming curve is a closed, oriented curve which lies on a NURBS surface. For our purposes, the curve will consist of piecewise linear segments in parametric space $\left\{\mathbf{p}_{\mathbf{i}}=\left(u_i, v_i\right)\right\}$. In real-world model, a single looped trimming curve may consist of multiple curve segments, whose control points are end to end.
+
+We calculate the orientation of the curve using the method of Rokne [23] for computing the area of a polygon. Given parametric points $\left\{\mathbf{p}_{\mathbf{i}}=\left(u_i, v_i\right)\right\}, i=0 \ldots n$, the signed area can be computed by
+$$
+A=\frac{1}{2} \sum_{i=0}^n u_i v_{(i+1) \bmod n}-u_{(i+1) \bmod n} v_i .
+$$
+If $A$ is negative, the curve has a clockwise orientation. Otherwise, the orientation is counter-clockwise. The orientation of a trimming curve determines which region of the surface is to be kept. We use the convention that the part of the surface to be kept is on the right side of the curve.
+
+Assume that we have already found the root on the surface, which is $(u_*,v_*)$, it is important to find out whether the root is trimmed or not.
+
+\subsection{Trimming Loops Hierarchy}
+\hspace*{8pt}
+Given a set of trimming curves on a particular B-Spline surface, we can build a hierarchy based on containment.
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.45\textwidth]{hie.png}
+    \caption{A set of trimming curves and the resulting hierarchy}
+\end{figure}
+
+Since the curves are not allowed to cross, there are only three possible relationships between two curves $\mathbf{c}_1$ and $\mathbf{c}_2$. $\mathbf{c}_1$ can contain $\mathbf{c}_2$, be contained in $\mathbf{c}_2$, or share no regions in common with $\mathbf{c}_2$. Each node in our hierarchy is a list of trims, and each trim can refer to yet another list of trims which fall inside of it. Building the hierarchy proceeds as:
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.3\textwidth, height=0.3\textwidth]{algo1.png}
+\end{figure}
+
+where \textit{trimlist} refers to all the child nodes of the present node.
+
+\subsection{Root Checking}
+\hspace*{8pt}
+We ray trace trimmed NURBS by first performing ray intersection with the untrimmed surface. If an intersection point $\left(u_*, v_*\right)$ is found, we then look to the trim hierarchy to determine whether it is to be culled or returned as a hit. The algorithm can be described as:
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.3\textwidth, height=0.25\textwidth]{algo2.png}
+\end{figure}
+
+\subsection{Containment Checking}
+\hspace*{8pt}
+In the algorithm shown above, a problem is yet to be solved, that how to determine whether a point $(u_*,v_*)$ is inside a trimming loop.
 
 \section{Results}
-For the untrimmed NURBS surface rendering, we successfully render a duck using different algorithms. The duck only consists of three NURBS surface patches. The scene is rendered with resolution $1080\times 1080$ and samples-per-pixel (spp) $1024$.
+For the untrimmed NURBS surface rendering, we successfully render different models. The duck only consists of three NURBS surface patches. For a single NURBS model, the scene is rendered with resolution $600\times 600$ and samples-per-pixel (spp) $256$. For the scene with 25 ducks, we set resolution be $300\times 300$, and spp be $1024$, which helps for noise reduction.
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.45\textwidth]{../results/duck.png}
+    \caption{Single duck with 3 NURBS surface patches}
+\end{figure}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.45\textwidth]{../results/chair.png}
+    \caption{Chair with 75 NURBS surface patches}
+\end{figure}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.45\textwidth]{../results/multi-duck.png}
+    \caption{Multiple ducks with 75 NURBS surface patches in total}
+\end{figure}
 
-For reference, we firstly render the duck with tessellation. Then, we will show the duck rendered by different methods without tessellation.
-% \begin{figure}[htbp]
-%     \centering
-%     \includegraphics[width=0.45\textwidth]{../results/result_mesh_1080_1024.png}
-%     \caption{Duck rendered using tessellation}
-% \end{figure}
-% \begin{figure}[htbp]
-%     \centering
-%     \includegraphics[width=0.45\textwidth]{../results/result_bvh_1080_1024.png}
-%     \caption{Duck rendered using BVH}
-% \end{figure}
-% \begin{figure}[htbp]
-%     \centering
-%     \includegraphics[width=0.45\textwidth]{../results/result_3x3_bvh.png}
-%     \caption{Multiple ducks rendered using BVH}
-% \end{figure}
-% \begin{figure}[htbp]
-%     \centering
-%     \includegraphics[width=0.45\textwidth]{../results/result_3x3_kdtree.png}
-%     \caption{Multiple ducks rendered using KD-Tree}
-% \end{figure}
+\section{Workload Distribution}
+\hspace*{8pt}
+The project workload is about evenly distributed to our two guys. The most basic part, path tracer with global illumination and BVH, is directly adopted from the code of Homework 4.
+
+For the untrimmed NURBS part, Zeen Chi is responsible for the knot refinement algorithm and Newton's iteration implementation, and Wenchao Li is responsible for generating subdivided control points as well as Bezier patches together with their AABBs. Also, Wenchao Li tried to build a kd-tree to maintain the AABBs of each NURBS surface.
+
+For the trimmed NURBS part, Zeen Chi is responsible for building the relative skeleton, calculating the orientation of each trimming curve, and building a hierarchy to record the relationship of containment between trimming loops. Wenchao Li is responsible for thinking about how to determine if a point $(u,v)$ is inside a trimming loop. This is extremely difficult, and we have limited time, so he will finish it afterwards if possible.
 
 \end{document}
