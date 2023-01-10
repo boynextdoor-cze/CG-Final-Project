@@ -1,7 +1,7 @@
 {
   "spp": 256,
   "max_depth": 12,
-  "image_resolution" : [300, 300],
+  "image_resolution" : [600, 600],
   "cam_config" : {
     "position" : [0,2500,17000],
     "look_at": [0,2500,0],
@@ -72,8 +72,14 @@
     {
       "nurbs_json_path" : "assets/largeModels/bird.json",
       "material_name" : "green_diffuse",
-      "translate": [100,2500,100],
-      "scale" : 10
+      "translate": [0,3000,0],
+      "scale" : 400
+    },
+    {
+      "nurbs_json_path" : "assets/largeModels/bird.json",
+      "material_name" : "green_diffuse",
+      "translate": [0,1000,0],
+      "scale" : 400
     }
   ]
 }
